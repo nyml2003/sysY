@@ -7,6 +7,8 @@ int main(int argc, char* argv[]) {
     std::string input = (argc == 5) ? argv[2] : "/app/tests/2/in.sy";
     std::string output = (argc == 5) ? argv[3] : "/app/tests/2/out.ll";
     std::string error = (argc == 5) ? argv[4] : "/app/tests/2/error.txt";
+    freopen(error.c_str(), "w", stderr);
+    freopen(output.c_str(), "w", stdout);
     if (type == std::string("mermaid")) {
         Compiler::AbstractSyntaxTree::dumpType =
         Compiler::AbstractSyntaxTree::DumpType::AST_MERMAID;
@@ -16,8 +18,6 @@ int main(int argc, char* argv[]) {
         Compiler::AbstractSyntaxTree::dumpType = Compiler::AbstractSyntaxTree::DumpType::IR_LLVM;
     }
     Compiler::Driver driver = Compiler::Driver(input, output, error, false, false);
-    freopen( output.c_str(), "w", stdout );
-    freopen( error.c_str(), "w", stderr );
     driver.parse();
     driver.result->dump();
     // std::int32_t a = 12444;

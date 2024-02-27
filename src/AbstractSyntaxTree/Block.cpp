@@ -12,6 +12,7 @@ namespace Compiler::AbstractSyntaxTree {
                 dumpMermaid();
                 break;
             case DumpType::IR_LLVM:
+                //dumpLLVM();
                 break;
         }
     }
@@ -25,7 +26,7 @@ namespace Compiler::AbstractSyntaxTree {
     void Block::dumpLLVM(llvm::Function* function) {
         llvm::BasicBlock* block = llvm::BasicBlock::Create(context, "entry", function);
         builder.SetInsertPoint(block);
-        statement->dumpLLVM(function);
+        statement->dumpLLVM();
     }
 
     void Block::optimize() {

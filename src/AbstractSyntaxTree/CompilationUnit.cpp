@@ -30,8 +30,8 @@ namespace Compiler::AbstractSyntaxTree {
     }
 
     void CompilationUnit::dumpLLVM(){
-        std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("main", context);
-        functionDefinition->dumpLLVM(std::move(module));
+        llvm::Module* module = new llvm::Module("top", context);
+        functionDefinition->dumpLLVM(module);
         module->print(llvm::outs(), nullptr);
     }
 

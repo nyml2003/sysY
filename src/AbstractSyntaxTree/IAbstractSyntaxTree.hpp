@@ -9,14 +9,13 @@
 #include "llvm/IR/IRBuilder.h"
 namespace Compiler::AbstractSyntaxTree {
     enum class DumpType {
-        None,
         AST_MERMAID,
         IR_LLVM,
     };
-    static llvm::LLVMContext context;
-    static llvm::IRBuilder<> builder(context);
-    static DumpType dumpType= DumpType::IR_LLVM;
-    static int idCounter = 0;
+    inline llvm::LLVMContext context;
+    inline llvm::IRBuilder<> builder(context);
+    inline DumpType dumpType;
+    inline int idCounter = 0;
     class IAbstractSyntaxTree {
     public:
         IAbstractSyntaxTree();

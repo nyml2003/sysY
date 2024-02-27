@@ -11,9 +11,9 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         std::cerr << "IExpression::dump() is not implemented" << std::endl;
     }
 
-    llvm::Value* IExpression::dumpLLVM(llvm::Function *function)
+    llvm::Value* IExpression::dumpLLVM()
     {
-        std::cerr << "IExpression::dumpLLVM() is not implemented" << std::endl;
+        std::cout << "IExpression::dumpLLVM() is not implemented" << std::endl;
         return nullptr;
     }
 
@@ -45,10 +45,10 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         right->dump();
     }
 
-    llvm::Value *BinaryExpression::dumpLLVM(llvm::Function *function)
+    llvm::Value *BinaryExpression::dumpLLVM()
     {
-        llvm::Value *leftValue = left->dumpLLVM(function);
-        llvm::Value *rightValue = right->dumpLLVM(function);
+        llvm::Value *leftValue = left->dumpLLVM();
+        llvm::Value *rightValue = right->dumpLLVM();
         switch (op)
         {
         case Operator::ADD:
@@ -121,9 +121,9 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         expression->dump();
     }
 
-    llvm::Value *UnaryExpression::dumpLLVM(llvm::Function *function)
+    llvm::Value *UnaryExpression::dumpLLVM()
     {
-        llvm::Value *value = expression->dumpLLVM(function);
+        llvm::Value *value = expression->dumpLLVM();
         switch (op)
         {
         case Operator::PLUS:
@@ -221,9 +221,9 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         std::cout << id << "[" << value << "]\n";
     }
 
-    llvm::Value *Int32::dumpLLVM(llvm::Function *function)
+    llvm::Value *Int32::dumpLLVM()
     {
-        return llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), value);
+        return builder.getInt32(value);
     }
 
     std::unique_ptr<IExpression> Int32::constantFold()
@@ -243,7 +243,7 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         std::cout << id << "[" << name << "]\n";
     }
 
-    llvm::Value *Identifier::dumpLLVM(llvm::Function *function)
+    llvm::Value *Identifier::dumpLLVM()
     {
         //TODO
         return nullptr;

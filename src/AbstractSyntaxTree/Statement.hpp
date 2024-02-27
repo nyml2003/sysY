@@ -14,7 +14,7 @@ namespace Compiler::AbstractSyntaxTree {
         std::unique_ptr<Expression::IExpression> expression;
         void dump();
         void dumpMermaid();
-        void dumpLLVM(llvm::Function* function);
+        void dumpLLVM();
         void optimize() override;
     };
 }

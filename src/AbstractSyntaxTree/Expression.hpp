@@ -56,7 +56,7 @@ namespace Compiler::AbstractSyntaxTree::Expression
     public:
         virtual void dump() override;
 
-        virtual llvm::Value* dumpLLVM(llvm::Function *function);
+        virtual llvm::Value *dumpLLVM();
 
         virtual std::unique_ptr<IExpression> constantFold();
 
@@ -75,7 +75,7 @@ namespace Compiler::AbstractSyntaxTree::Expression
         std::unique_ptr<IExpression> right;
         Operator op;
         void dump() override;
-        llvm::Value* dumpLLVM(llvm::Function *function) override;
+        llvm::Value* dumpLLVM() override;
         std::unique_ptr<IExpression> constantFold() override;
         bool isConstant() override;
     };
@@ -89,7 +89,7 @@ namespace Compiler::AbstractSyntaxTree::Expression
         Operator op;
 
         void dump() override;
-        llvm::Value* dumpLLVM(llvm::Function *function) override;
+        llvm::Value* dumpLLVM() override;
         std::unique_ptr<IExpression> constantFold() override;
 
         bool isConstant() override;
@@ -103,7 +103,7 @@ namespace Compiler::AbstractSyntaxTree::Expression
         std::int32_t value{};
 
         void dump() override;
-        llvm::Value* dumpLLVM(llvm::Function *function) override;
+        llvm::Value* dumpLLVM() override;
         std::unique_ptr<IExpression> constantFold() override;
 
         bool isConstant() override;
@@ -117,7 +117,7 @@ namespace Compiler::AbstractSyntaxTree::Expression
         std::string name;
 
         void dump() override;
-        llvm::Value* dumpLLVM(llvm::Function *function) override;
+        llvm::Value* dumpLLVM() override;
         std::unique_ptr<IExpression> constantFold() override;
 
         bool isConstant() override;

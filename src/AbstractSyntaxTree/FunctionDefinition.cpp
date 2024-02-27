@@ -32,11 +32,9 @@ namespace Compiler::AbstractSyntaxTree {
         block->dump();
     }
 
-    void FunctionDefinition::dumpLLVM(std::unique_ptr<llvm::Module> module) {
-        llvm::FunctionType *functionType = llvm::FunctionType::get(llvm::Type::getInt32Ty(context), false);
-        llvm::Function *function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, identifier->name, module.get());
-        llvm::BasicBlock *basicBlock = llvm::BasicBlock::Create(context, "entry", function);
-        builder.SetInsertPoint(basicBlock);
+    void FunctionDefinition::dumpLLVM(llvm::Module* module) {
+        llvm::FunctionType *functionType = llvm::FunctionType::get(builder.getInt32Ty(), false);
+        llvm::Function *function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, identifier->name, module);
         block->dumpLLVM(function);
         llvm::verifyFunction(*function);
     }
