@@ -1,0 +1,15 @@
+version: '1.0.0'
+services:
+  flex-bison-llvm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["/bin/bash"]
+    ports:
+      - "8022:22"
+    tty: true
+    stdin_open: true
+    volumes:
+      - .:/app
+    
+    
