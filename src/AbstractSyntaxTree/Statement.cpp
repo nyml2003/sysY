@@ -25,7 +25,8 @@ namespace Compiler::AbstractSyntaxTree {
     }
 
     void Statement::dumpLLVM(llvm::Function* function) {
-        builder.CreateRet(expression->dumpLLVM(function));
+        llvm::Value* value = expression->dumpLLVM(function);
+        builder.CreateRet(value);
     }
 
     void Statement::optimize() {

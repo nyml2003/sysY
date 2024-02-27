@@ -3,6 +3,7 @@
 //
 #include "CompilationUnit.hpp"
 #include <iostream>
+#include <llvm/IR/Module.h>
 namespace Compiler::AbstractSyntaxTree {
     CompilationUnit::CompilationUnit(std::unique_ptr<FunctionDefinition> functionDefinition) : functionDefinition(std::move(functionDefinition)) {}
     void CompilationUnit::dump(){
@@ -29,10 +30,9 @@ namespace Compiler::AbstractSyntaxTree {
     }
 
     void CompilationUnit::dumpLLVM(){
-        llvm::Module* module = new llvm::Module("top", context);
-        functionDefinition->dumpLLVM(module);
+        std::unique_ptr<llvm::Module> module = std::make_unique<llvm::Module>("main", context);
+        functionDefinition->dumpLLVM(std::move(module));
         module->print(llvm::outs(), nullptr);
-        std::cout<<"end of module\n";
     }
 
     void CompilationUnit::optimize() {

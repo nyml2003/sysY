@@ -7,9 +7,6 @@ int main(int argc, char* argv[]) {
     std::string input = (argc == 5) ? argv[2] : "/app/tests/2/in.sy";
     std::string output = (argc == 5) ? argv[3] : "/app/tests/2/out.ll";
     std::string error = (argc == 5) ? argv[4] : "/app/tests/2/error.txt";
-    for (auto i = 0; i < argc; i++) {
-        std::cout << argv[i] << std::endl;
-    }
     if (type == std::string("mermaid")) {
         Compiler::AbstractSyntaxTree::dumpType =
         Compiler::AbstractSyntaxTree::DumpType::AST_MERMAID;

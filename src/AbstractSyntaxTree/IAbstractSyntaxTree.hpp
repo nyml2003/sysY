@@ -5,23 +5,18 @@
 #ifndef FLEX_BISON_LLVM_INTERFACE_ABSTRACT_SYNTAX_TREE_HPP
 #define FLEX_BISON_LLVM_INTERFACE_ABSTRACT_SYNTAX_TREE_HPP
 #include <memory>
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
+#include "llvm/IR/IRBuilder.h"
 namespace Compiler::AbstractSyntaxTree {
     enum class DumpType {
         None,
         AST_MERMAID,
         IR_LLVM,
     };
-    
-    static int idCounter = 0;
     static llvm::LLVMContext context;
     static llvm::IRBuilder<> builder(context);
-    static DumpType dumpType;
+    static DumpType dumpType= DumpType::IR_LLVM;
+    static int idCounter = 0;
     class IAbstractSyntaxTree {
     public:
         IAbstractSyntaxTree();

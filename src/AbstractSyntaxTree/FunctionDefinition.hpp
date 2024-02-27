@@ -15,7 +15,7 @@ namespace Compiler::AbstractSyntaxTree {
         std::unique_ptr<Block> block;
         void dump();
         void dumpMermaid();
-        void dumpLLVM(llvm::Module* module);
+        void dumpLLVM(std::unique_ptr<llvm::Module> module);
         void optimize() override;
     };
 }

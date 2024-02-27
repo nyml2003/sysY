@@ -5,6 +5,8 @@
 #include "Header.hpp"
 #include "llvm/IR/Verifier.h"
 #include <iostream>
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Function.h"
 namespace Compiler::AbstractSyntaxTree {
     FunctionDefinition::FunctionDefinition(std::unique_ptr<Type> type, std::unique_ptr<Expression::Identifier> identifier, std::unique_ptr<Block> block) : type(std::move(type)), identifier(std::move(identifier)), block(std::move(block)) {}
     void FunctionDefinition::dump() {
@@ -30,9 +32,11 @@ namespace Compiler::AbstractSyntaxTree {
         block->dump();
     }
 
-    void FunctionDefinition::dumpLLVM(llvm::Module* module) {
-        llvm::FunctionType* functionType = llvm::FunctionType::get(builder.getInt32Ty(), false);
-        llvm::Function* function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, identifier->name, module);
+    void FunctionDefinition::dumpLLVM(std::unique_ptr<llvm::Module> module) {
+        llvm::FunctionType *functionType = llvm::FunctionType::get(llvm::Type::getInt32Ty(context), false);
+        llvm::Function *function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, identifier->name, module.get());
+        llvm::BasicBlock *basicBlock = llvm::BasicBlock::Create(context, "entry", function);
+        builder.SetInsertPoint(basicBlock);
         block->dumpLLVM(function);
         llvm::verifyFunction(*function);
     }
