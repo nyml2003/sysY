@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(flex-bison-llvm)
+project(sed)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -21,7 +21,7 @@ ADD_FLEX_BISON_DEPENDENCY(scanner parser)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/AbstractSyntaxTree/Node)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/core)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/SemanticAnalyzer)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/Local)
 set(CMAKE_CXX_FLAGS "-std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -Wno-unused-value -Wno-unused-label -Wno-unused-local-typedefs -Wno-unused-private-field")
 
 add_executable(flex-bison-llvm main.cpp
@@ -58,6 +58,8 @@ add_executable(flex-bison-llvm main.cpp
         src/AbstractSyntaxTree/Node/Declaration.hpp
         src/AbstractSyntaxTree/Node/Definition.cpp
         src/AbstractSyntaxTree/Node/Definition.cpp
+        src/Local/Scope.cpp
+        src/Local/Scope.hpp
 
 )
 
@@ -81,7 +83,7 @@ target_link_libraries(flex-bison-llvm
         LLVM
 )
 
-set(OUTPUT_PRODUCT "mermaid")
+set(OUTPUT_PRODUCT_NAME "mermaid" CACHE STRING "Output product name")
 
 enable_testing()
 
@@ -90,16 +92,16 @@ file(GLOB TEST_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/tests ${CMAKE_CURRENT_S
 foreach (TEST_DIR ${TEST_DIRS})
     set(TEST_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/in.sy)
 
-    if (OUTPUT_PRODUCT STREQUAL "mermaid")
+    if (OUTPUT_PRODUCT_NAME STREQUAL "mermaid")
         set(TEST_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.md)
 
-    elseif (OUTPUT_PRODUCT STREQUAL "llvm")
+    elseif (OUTPUT_PRODUCT_NAME STREQUAL "llvm")
         set(TEST_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.ll)
     endif ()
 
     set(TEST_ERROR ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/error.txt)
     add_test(
             NAME ${TEST_DIR}
-            COMMAND flex-bison-llvm ${OUTPUT_PTODUCT} ${TEST_INPUT} ${TEST_OUTPUT} ${TEST_ERROR}
+            COMMAND flex-bison-llvm ${OUTPUT_PRODUCT_NAME} ${TEST_INPUT} ${TEST_OUTPUT} ${TEST_ERROR}
     )
 endforeach ()

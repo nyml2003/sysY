@@ -36,6 +36,6 @@ namespace Compiler::Core {
     
 }
 using Driver = Compiler::Core::Driver;
-inline static Driver driver(false, false);
+inline Driver driver(false, false);
 
 #endif // SYSY_COMPILER_CORE_DRIVER_HPP

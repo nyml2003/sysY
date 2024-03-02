@@ -3,9 +3,18 @@
 //
 
 #include "Declaration.hpp"
+#include "Scope.hpp"
 namespace Compiler::AbstractSyntaxTree::Node {
-    Declaration::Declaration(Type type, IdentPtr ident) : type(type), ident(std::move(ident)) {
+    Declaration::Declaration(Type type, IdentPtr ident) {
         this->typeName = "Declaration";
+        this->ident = std::move(ident);
+        this->type = type;
+        if (this->begin.column > this->ident->begin.column){
+            this->begin = this->ident->begin;
+        }
+        if (this->end.column < this->ident->end.column){
+            this->end = this->ident->end;
+        }
     }
 
     void Declaration::toMermaid() {
@@ -20,6 +29,10 @@ namespace Compiler::AbstractSyntaxTree::Node {
     }
 
     void Declaration::optimize() {
-        // TODO
+        auto message = context.declareVar(this->ident->type, this->ident->name);
+        if (!message.success){
+            this->printLocation();
+            std::cerr << "|Error: " << message.message << std::endl<<std::endl;
+        }
     }
 }

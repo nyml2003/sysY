@@ -1,0 +1,4 @@
+int f(){
+float c;
+int b=2*c;
+}

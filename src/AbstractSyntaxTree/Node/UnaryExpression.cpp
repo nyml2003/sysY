@@ -8,6 +8,8 @@ namespace Compiler::AbstractSyntaxTree::Node {
     
     UnaryExpression::UnaryExpression(Operator op, ExprPtr expr) : op(op), expr(std::move(expr)) {
         this->typeName = "UnaryExpression";
+        this->begin = this->expr->begin;
+        this->end = this->expr->end;
     }
 
     void UnaryExpr::toMermaid() {
@@ -37,5 +39,10 @@ namespace Compiler::AbstractSyntaxTree::Node {
             this->expr = this->expr->constantFold();
         }
         return this->expr->isConstant();
+    }
+
+    Type UnaryExpr::getType()
+    {
+        return this->expr->getType();
     }
 }

@@ -18,6 +18,7 @@ namespace Compiler::AbstractSyntaxTree::Node {
         void toIR() override;
         ExprPtr constantFold() override;
         bool isConstant() override;
+        Type getType() override;
     };
 
 }

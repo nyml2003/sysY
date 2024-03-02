@@ -28,4 +28,9 @@ namespace Compiler::AbstractSyntaxTree::Node {
     {
         return true;
     }
+
+    Type Int32::getType()
+    {
+        return Type::INT;
+    }
 }

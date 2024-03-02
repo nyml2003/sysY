@@ -95,7 +95,7 @@ BlockItemList: BlockItem { $$ = std::move($1); }
              | BlockItemList BlockItem { $$ = std::move($1); $$.insert($$.end(), std::make_move_iterator($2.begin()), std::make_move_iterator($2.end())); }
              ;
 
-Stmt: LVal ASSIGN Exp SEMICOLON { $$ = std::make_unique< AssignStmt >(std::move($1), std::move($3)); }
+Stmt: LVal ASSIGN Exp SEMICOLON { $$ = std::make_unique< AssignStmt >(std::move($1), std::move($3)); std::cout<<"detect a assignment"<<std::endl;}
     | RETURN Exp SEMICOLON { $$ = std::make_unique< ReturnStmt >(std::move($2)); }
     ;
 
@@ -179,23 +179,31 @@ ConstDecl: CONST TYPE_INT ConstDefList SEMICOLON {
     $$ = std::vector< std::unique_ptr< BlockItem > >();
     for(auto &def : $3){
         auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        ident->begin = def->begin;
+        ident->end = def->end;
         auto decl = std::make_unique< Decl >(Type::INT, std::move(ident));
         $$.push_back(std::move(decl));
-        $$.push_back(std::move(def));
+        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
+            $$.push_back(std::move(def));
+        }
     }
 }
          | CONST TYPE_FLOAT ConstDefList SEMICOLON { 
     $$ = std::vector< std::unique_ptr< BlockItem > >();
     for(auto &def : $3){
         auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        ident->begin = def->begin;
+        ident->end = def->end;
         auto decl = std::make_unique< Decl >(Type::FLOAT, std::move(ident));
         $$.push_back(std::move(decl));
-        $$.push_back(std::move(def));
+        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
+            $$.push_back(std::move(def));
+        }
     }
 }
          ;
 
-ConstDefList: ConstDef { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); }
+ConstDefList: ConstDef { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); std::cout<<"detect a const deflist"<<std::endl;}
             | ConstDefList COMMA ConstDef { $$ = std::move($1); $$.push_back(std::move($3)); }
             ;
 
@@ -212,18 +220,26 @@ VarDecl: TYPE_INT VarDefList SEMICOLON {
     $$ = std::vector< std::unique_ptr< BlockItem > >();
     for(auto &def : $2){
         auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        ident->begin = def->begin;
+        ident->end = def->end;
         auto decl = std::make_unique< Decl >(Type::INT, std::move(ident));
         $$.push_back(std::move(decl));
-        $$.push_back(std::move(def));
+        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
+            $$.push_back(std::move(def));
+        }
     }
 }
         | TYPE_FLOAT VarDefList SEMICOLON {
     $$ = std::vector< std::unique_ptr< BlockItem > >();
     for(auto &def : $2){
         auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        ident->begin = def->begin;
+        ident->end = def->end;
         auto decl = std::make_unique< Decl >(Type::FLOAT, std::move(ident));
         $$.push_back(std::move(decl));
-        $$.push_back(std::move(def));
+        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
+            $$.push_back(std::move(def));
+        }
     }
 }
         ;
@@ -234,7 +250,7 @@ VarDefList: VarDef { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push
 
 
 VarDef: Ident { auto nullExpr = std::make_unique< NullExpr > (); $$ = std::make_unique< Def >(std::move($1), std::move(nullExpr)); }
-        | Ident ASSIGN InitVal { $$ = std::make_unique< Def >(std::move($1), std::move($3)); }
+        | Ident ASSIGN InitVal { $$ = std::make_unique< Def >(std::move($1), std::move($3)); std::cout<<"detect a vardef"<<std::endl;}
         ;
 
 InitVal: Exp { $$ = std::move($1); }

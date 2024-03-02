@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include "location.hh"
 namespace Compiler::AbstractSyntaxTree::Node {
     class Node;
 }
@@ -24,6 +25,9 @@ namespace Compiler::AbstractSyntaxTree::Node {
         virtual void optimize()=0;
         size_t id;
         std::string typeName;
+        yy::position begin;
+        yy::position end;
+        void printLocation();
     };
 }
 using Node = Compiler::AbstractSyntaxTree::Node::Node;

@@ -1,37 +1,0 @@
---(end of buffer or a NUL)
---accepting rule at line 46 ("int")
---accepting rule at line 52 (" ")
---accepting rule at line 57 ("a")
---accepting rule at line 22 (";")
---accepting rule at line 52 ("")
---accepting rule at line 54 ("
-")
---accepting rule at line 46 ("int")
---accepting rule at line 52 (" ")
---accepting rule at line 57 ("main")
---accepting rule at line 23 ("(")
---accepting rule at line 24 (")")
---accepting rule at line 25 ("{")
---accepting rule at line 52 ("")
---accepting rule at line 54 ("
-")
---accepting rule at line 52 ("    ")
---accepting rule at line 46 ("int")
---accepting rule at line 52 (" ")
---accepting rule at line 57 ("a")
---accepting rule at line 22 (";")
---accepting rule at line 52 ("")
---accepting rule at line 54 ("
-")
---accepting rule at line 52 ("    ")
---accepting rule at line 51 ("return")
---accepting rule at line 52 (" ")
---accepting rule at line 45 ("0")
---accepting rule at line 22 (";")
---accepting rule at line 52 ("")
---accepting rule at line 54 ("
-")
---(end of buffer or a NUL)
---accepting rule at line 26 ("}")
---(end of buffer or a NUL)
---EOF (start condition 0)

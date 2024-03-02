@@ -9,14 +9,19 @@
 namespace Compiler::AbstractSyntaxTree::Node {
     enum class Type {
         UNDEFINED,
+        NONE,
         INT,
         VOID,
         FLOAT,
+        ARRAY,
     };
     inline std::map<Type, std::string> typeName = {
+            {Type::UNDEFINED, "undefined"},
+            {Type::NONE, "none"},
             {Type::INT, "int"},
             {Type::VOID, "void"},
             {Type::FLOAT, "float"},
+            {Type::ARRAY, "array"},
     };
 }
 using Type = Compiler::AbstractSyntaxTree::Node::Type;

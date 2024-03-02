@@ -59,6 +59,7 @@ namespace Compiler::AbstractSyntaxTree::Node
         virtual std::unique_ptr<Expression> constantFold()=0;
         void optimize() override;
         virtual bool isConstant()=0;
+        virtual Type getType()=0;
         ~Expression() override = default;
     };
     class NullExpression : public Expression
@@ -69,6 +70,7 @@ namespace Compiler::AbstractSyntaxTree::Node
         void toIR() override;
         std::unique_ptr<Expression> constantFold() override;
         bool isConstant() override;
+        Type getType() override;
     };
 }
 using Operator = Compiler::AbstractSyntaxTree::Node::Operator;

@@ -1,0 +1,4 @@
+|int b=2*c;
+|        ^
+|Error: undefined variable c
+

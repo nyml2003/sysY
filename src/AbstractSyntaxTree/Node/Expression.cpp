@@ -83,4 +83,9 @@ namespace Compiler::AbstractSyntaxTree::Node {
     {
         return true;
     }
+
+    Type NullExpression::getType()
+    {
+        return Type::NONE;
+    }
 }

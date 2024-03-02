@@ -6,6 +6,8 @@
 namespace Compiler::AbstractSyntaxTree::Node {
     FunctionDefinition::FunctionDefinition(Type type, IdentPtr ident, BlockPtr block) : type(type), ident(std::move(ident)), block(std::move(block)) {
         this->typeName = "FuncDef";
+        this->begin = this->ident->begin;
+        this->end = this->block->end;
     }
 
     void FuncDef::toMermaid() {

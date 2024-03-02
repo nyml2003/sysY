@@ -9,9 +9,13 @@ namespace Compiler::AbstractSyntaxTree::Node {
 
     AssignStatement::AssignStatement(IdentPtr ident, ExprPtr def) : def(std::make_unique<Definition>(std::move(ident), std::move(def))) {
         this->typeName = "Assign";
+        this->begin = this->def->begin;
+        this->end = this->def->end;
     }
 
     void AssignStatement::toMermaid() {
+        std::cout << this->id << "[" << this->typeName << "]" << std::endl;
+        std::cout << this->id << "-->" << this->def->id << std::endl;
         this->def->toMermaid();
     }
 
@@ -25,6 +29,8 @@ namespace Compiler::AbstractSyntaxTree::Node {
 
     ReturnStatement::ReturnStatement(ExprPtr expr) : expr(std::move(expr)) {
         this->typeName = "Return";
+        this->begin = this->expr->begin;
+        this->end = this->expr->end;
     }
 
     void ReturnStatement::toMermaid() {

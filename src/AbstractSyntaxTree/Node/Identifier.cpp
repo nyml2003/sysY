@@ -4,10 +4,11 @@
 
 #include "Identifier.hpp"
 #include <iostream>
+#include <Scope.hpp>
 namespace Compiler::AbstractSyntaxTree::Node {
     Identifier::Identifier(const std::string &name) {
         this->name = name;
-        this->type = Type::VOID;
+        this->type = Type::NONE;
         this->typeName = "Ident";
     }
 
@@ -29,5 +30,18 @@ namespace Compiler::AbstractSyntaxTree::Node {
     bool Ident::isConstant()
     {
         return false;
+    }
+
+    Type Ident::getType()
+    {
+        if (context.isReady){
+            auto message = context.checkVar(this->name);
+            if (!message.success){
+                this->printLocation();
+                std::cerr << "|Error: " << message.message << std::endl<<std::endl;
+            }
+            this->type = message.type;
+        }
+        return this->type;
     }
 }

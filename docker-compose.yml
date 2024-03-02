@@ -1,6 +1,6 @@
 version: '1.0.0'
 services:
-  flex-bison-llvm:
+  env:
     build:
       context: .
       dockerfile: Dockerfile

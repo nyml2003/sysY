@@ -3,11 +3,13 @@
 //
 #include "Program.hpp"
 #include <iostream>
-
+#include "Scope.hpp"
 namespace Compiler::AbstractSyntaxTree::Node {
     Program::Program() {
         this->block = std::make_unique<Block>();
         this->typeName = "program";
+        this->begin = this->block->begin;
+        this->end = this->block->end;
     }
 
     void Program::toMermaid() {
@@ -23,6 +25,7 @@ namespace Compiler::AbstractSyntaxTree::Node {
     }
 
     void Program::optimize() {
+        context.isReady = true;
         this->block->optimize();
     }
 }
