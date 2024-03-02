@@ -4,10 +4,10 @@
 
 #ifndef FLEX_BISON_LLVM_BLOCK_HPP
 #define FLEX_BISON_LLVM_BLOCK_HPP
-#include "IAbstractSyntaxTree.hpp"
+#include "Node/Node.hpp"
 #include "Statement.hpp"
 namespace Compiler::AbstractSyntaxTree {
-    class Block : public IAbstractSyntaxTree {
+    class Block : public Node {
     public:
         explicit Block(std::unique_ptr<Statement> statement);
         std::unique_ptr<Statement> statement;

@@ -4,11 +4,11 @@
 
 #ifndef FLEX_BISON_LLVM_STATEMENT_HPP
 #define FLEX_BISON_LLVM_STATEMENT_HPP
-#include "IAbstractSyntaxTree.hpp"
+#include "Node/Node.hpp"
 #include "Expression.hpp"
 
 namespace Compiler::AbstractSyntaxTree {
-    class Statement : public IAbstractSyntaxTree {
+    class Statement : public Node {
     public:
         explicit Statement(std::unique_ptr<Expression::IExpression>);
         std::unique_ptr<Expression::IExpression> expression;

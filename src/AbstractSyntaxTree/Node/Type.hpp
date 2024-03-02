@@ -7,7 +7,7 @@
 #include "Header.hpp"
 #include <string>
 namespace Compiler::AbstractSyntaxTree {
-    class Type : public IAbstractSyntaxTree {
+    class Type : public Node {
     public:
         explicit Type(std::string value);
         std::string value;

@@ -7,7 +7,7 @@
 #include "Header.hpp"
 
 namespace Compiler::AbstractSyntaxTree {
-    class FunctionDefinition : public IAbstractSyntaxTree {
+    class FunctionDefinition : public Node {
     public:
         explicit FunctionDefinition(std::unique_ptr<Type> type, std::unique_ptr<Expression::Identifier> identifier, std::unique_ptr<Block> block);
         std::unique_ptr<Type> type;

@@ -7,7 +7,7 @@
 #include "Header.hpp"
 namespace Compiler::AbstractSyntaxTree
 {
-    class CompilationUnit : public IAbstractSyntaxTree {
+    class CompilationUnit : public Node {
     public:
         explicit CompilationUnit(std::unique_ptr<FunctionDefinition> functionDefinition) ;
         std::unique_ptr<FunctionDefinition> functionDefinition;

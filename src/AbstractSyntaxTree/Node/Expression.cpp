@@ -8,7 +8,7 @@
 namespace Compiler::AbstractSyntaxTree::Expression{
     void IExpression::dump()
     {
-        std::cerr << "IExpression::dump() is not implemented" << std::endl;
+       Compiler::driver.errorFile << "IExpression::dump() is not implemented" << std::endl;
     }
 
     llvm::Value* IExpression::dumpLLVM()
@@ -19,19 +19,19 @@ namespace Compiler::AbstractSyntaxTree::Expression{
 
     std::unique_ptr<IExpression> IExpression::constantFold()
     {
-        std::cerr << "IExpression::constantFold() is not implemented" << std::endl;
+       Compiler::driver.errorFile << "IExpression::constantFold() is not implemented" << std::endl;
         return nullptr;
     }
 
     bool IExpression::isConstant()
     {
-        std::cerr << "IExpression::isConstant() is not implemented" << std::endl;
+       Compiler::driver.errorFile << "IExpression::isConstant() is not implemented" << std::endl;
         return false;
     }
 
     void IExpression::optimize()
     {
-        std::cerr << "IExpression::optimize() is not implemented" << std::endl;
+       Compiler::driver.errorFile << "IExpression::optimize() is not implemented" << std::endl;
     }
 
     BinaryExpression::BinaryExpression(std::unique_ptr<IExpression> left, std::unique_ptr<IExpression> right, Operator op)
@@ -78,7 +78,7 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         case Operator::GE:
             return builder.CreateICmpSGE(leftValue, rightValue);
         default:
-            std::cerr << "dumpLLVM() is not implemented" << std::endl;
+           Compiler::driver.errorFile << "dumpLLVM() is not implemented" << std::endl;
             return nullptr;
         }
     }
@@ -133,7 +133,7 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         case Operator::NOT:
             return builder.CreateNot(value);
         default:
-            std::cerr << "dumpLLVM() is not implemented" << std::endl;
+           Compiler::driver.errorFile << "dumpLLVM() is not implemented" << std::endl;
             return nullptr;
         }
     }
@@ -193,7 +193,7 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         case Operator::GE:
             return left >= right;
         default:
-            std::cerr << "eval() is not implemented" << std::endl;
+           Compiler::driver.errorFile << "eval() is not implemented" << std::endl;
             return 0;
         }
     }
@@ -209,7 +209,7 @@ namespace Compiler::AbstractSyntaxTree::Expression{
         case Operator::NOT:
             return !value;
         default:
-            std::cerr << "eval() is not implemented" << std::endl;
+           Compiler::driver.errorFile << "eval() is not implemented" << std::endl;
             return 0;
         }
     }

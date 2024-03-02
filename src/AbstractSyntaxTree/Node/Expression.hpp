@@ -51,7 +51,7 @@ namespace Compiler::AbstractSyntaxTree::Expression
         {Operator::MINUS, "\"-\""},
     };
 
-    class IExpression : public IAbstractSyntaxTree
+    class IExpression : public Node
     {
     public:
         virtual void dump() override;

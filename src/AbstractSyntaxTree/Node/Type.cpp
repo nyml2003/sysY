@@ -15,7 +15,7 @@ namespace Compiler::AbstractSyntaxTree {
             case DumpType::IR_LLVM:
                 break;
             default:
-                std::cerr << "FunctionDefinition::dump() is not implemented" << std::endl;
+               Compiler::driver.errorFile << "FunctionDefinition::dump() is not implemented" << std::endl;
         }
     }
 

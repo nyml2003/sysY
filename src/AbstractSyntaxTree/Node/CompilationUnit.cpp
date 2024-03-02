@@ -7,7 +7,6 @@
 namespace Compiler::AbstractSyntaxTree {
     CompilationUnit::CompilationUnit(std::unique_ptr<FunctionDefinition> functionDefinition) : functionDefinition(std::move(functionDefinition)) {}
     void CompilationUnit::dump(){
-        this->optimize();
         switch(dumpType){
             case DumpType::AST_MERMAID:
                 dumpMermaid();
@@ -16,8 +15,7 @@ namespace Compiler::AbstractSyntaxTree {
                 dumpLLVM();
                 break;
             default:
-                std::cerr << "CompilationUnit::dump() is not implemented" << std::endl;
-                
+               Compiler::driver.errorFile << "CompilationUnit::dump() is not implemented" << std::endl;
         }
     }
     void CompilationUnit::dumpMermaid(){
@@ -32,7 +30,7 @@ namespace Compiler::AbstractSyntaxTree {
     void CompilationUnit::dumpLLVM(){
         llvm::Module* module = new llvm::Module("top", context);
         functionDefinition->dumpLLVM(module);
-        module->print(llvm::outs(), nullptr);
+        module->print(llvm::errs(), nullptr);
     }
 
     void CompilationUnit::optimize() {
