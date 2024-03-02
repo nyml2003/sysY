@@ -1,39 +1,25 @@
 //
-// Created by venty on 2024/2/23.
+// Created by 风唤长河 on 2024/2/23.
 //
 #include "CompilationUnit.hpp"
 #include <iostream>
-#include <llvm/IR/Module.h>
-namespace Compiler::AbstractSyntaxTree {
-    CompilationUnit::CompilationUnit(std::unique_ptr<FunctionDefinition> functionDefinition) : functionDefinition(std::move(functionDefinition)) {}
-    void CompilationUnit::dump(){
-        switch(dumpType){
-            case DumpType::AST_MERMAID:
-                dumpMermaid();
-                break;
-            case DumpType::IR_LLVM:
-                dumpLLVM();
-                break;
-            default:
-               Compiler::driver.errorFile << "CompilationUnit::dump() is not implemented" << std::endl;
-        }
+namespace Compiler::AbstractSyntaxTree::Node {
+
+    CompilationUnit::CompilationUnit(FuncDefPtr funcDef) : funcDef(std::move(funcDef)) {
+        this->typeName = "CompilationUnit";
     }
-    void CompilationUnit::dumpMermaid(){
-        std::cout<<"```mermaid\n";
-        std::cout<<"graph TD\n";
-        std::cout<<id << "[" << "CompUnit" << "]\n";
-        std::cout<<id << "-->" << functionDefinition->id << std::endl;
-        functionDefinition->dumpMermaid();
-        std::cout<<"```\n";
+    void CompUnit::toMermaid() {
+        std::cout << this->id << "[" << this->typeName << "]" << std::endl;
+        std::cout << this->id << "-->" << this->funcDef->id << std::endl;
+        this->funcDef->toMermaid();
     }
 
-    void CompilationUnit::dumpLLVM(){
-        llvm::Module* module = new llvm::Module("top", context);
-        functionDefinition->dumpLLVM(module);
-        module->print(llvm::errs(), nullptr);
+    void CompUnit::toIR() {
+        // TODO
     }
 
-    void CompilationUnit::optimize() {
-        functionDefinition->optimize();
+    void CompUnit::optimize() {
+        this->funcDef->optimize();
     }
+
 }

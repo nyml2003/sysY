@@ -1,18 +1,16 @@
 //
-// Created by venty on 2024/2/24.
+// Created by 风唤长河 on 2024/2/24.
 //
 
-#ifndef FLEX_BISON_LLVM_EXPRESSION_HPP
-#define FLEX_BISON_LLVM_EXPRESSION_HPP
+#ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_EXPRESSION_HPP
+#define SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_EXPRESSION_HPP
 
-#include "Header.hpp"
+#include "Node.hpp"
 #include <map>
-#include <string>
-
-namespace Compiler::AbstractSyntaxTree::Expression
+#include <cstdint>
+#include "Type.hpp"
+namespace Compiler::AbstractSyntaxTree::Node
 {
-    std::int32_t eval(Operator op, std::int32_t left, std::int32_t right);
-    std::int32_t eval(Operator op, std::int32_t value);
     enum class Operator
     {
         ADD,
@@ -32,95 +30,51 @@ namespace Compiler::AbstractSyntaxTree::Expression
         PLUS,
         MINUS,
     };
-    static std::map<Operator, std::string> opName = {
-        {Operator::ADD, "\"+\""},
-        {Operator::SUB, "\"-\""},
-        {Operator::MUL, "\"*\""},
-        {Operator::DIV, "\"/\""},
-        {Operator::MOD, "\"%\""},
-        {Operator::AND, "\"&&\""},
-        {Operator::OR, "\"||\""},
-        {Operator::EQ, "\"==\""},
-        {Operator::NE, "\"!=\""},
-        {Operator::LT, "\"<\""},
-        {Operator::GT, "\">\""},
-        {Operator::LE, "\"<=\""},
-        {Operator::GE, "\">=\""},
-        {Operator::NOT, "\"!\""},
-        {Operator::PLUS, "\"+\""},
-        {Operator::MINUS, "\"-\""},
+    std::int32_t eval(Operator op, std::int32_t left, std::int32_t right);
+    std::int32_t eval(Operator op, std::int32_t value);
+    inline static std::map<Operator, std::string> operatorName = {
+            {Operator::ADD, "\"+\""},
+            {Operator::SUB, "\"-\""},
+            {Operator::MUL, "\"*\""},
+            {Operator::DIV, "\"/\""},
+            {Operator::MOD, "\"%\""},
+            {Operator::AND, "\"&&\""},
+            {Operator::OR, "\"||\""},
+            {Operator::EQ, "\"==\""},
+            {Operator::NE, "\"!=\""},
+            {Operator::LT, "\"<\""},
+            {Operator::GT, "\">\""},
+            {Operator::LE, "\"<=\""},
+            {Operator::GE, "\">=\""},
+            {Operator::NOT, "\"!\""},
+            {Operator::PLUS, "\"+\""},
+            {Operator::MINUS, "\"-\""},
     };
-
-    class IExpression : public Node
+    class Expression : virtual public Node
     {
     public:
-        virtual void dump() override;
-
-        virtual llvm::Value *dumpLLVM();
-
-        virtual std::unique_ptr<IExpression> constantFold();
-
-        virtual bool isConstant();
-
-        virtual ~IExpression() = default;
-
+        Expression() = default;
+        void toMermaid() override =0;
+        void toIR() override =0;
+        virtual std::unique_ptr<Expression> constantFold()=0;
         void optimize() override;
+        virtual bool isConstant()=0;
+        ~Expression() override = default;
     };
-
-    class BinaryExpression : public IExpression
+    class NullExpression : public Expression
     {
     public:
-        explicit BinaryExpression(std::unique_ptr<IExpression> left, std::unique_ptr<IExpression> right, Operator op);
-        std::unique_ptr<IExpression> left;
-        std::unique_ptr<IExpression> right;
-        Operator op;
-        void dump() override;
-        llvm::Value* dumpLLVM() override;
-        std::unique_ptr<IExpression> constantFold() override;
-        bool isConstant() override;
-    };
-
-    class UnaryExpression : public IExpression
-    {
-    public:
-        UnaryExpression(std::unique_ptr<IExpression> expression, Operator op);
-
-        std::unique_ptr<IExpression> expression;
-        Operator op;
-
-        void dump() override;
-        llvm::Value* dumpLLVM() override;
-        std::unique_ptr<IExpression> constantFold() override;
-
-        bool isConstant() override;
-    };
-
-    class Int32 : public IExpression
-    {
-    public:
-        explicit Int32(std::int32_t value);
-
-        std::int32_t value{};
-
-        void dump() override;
-        llvm::Value* dumpLLVM() override;
-        std::unique_ptr<IExpression> constantFold() override;
-
-        bool isConstant() override;
-    };
-
-    class Identifier : public IExpression
-    {
-    public:
-        explicit Identifier(const std::string &name);
-
-        std::string name;
-
-        void dump() override;
-        llvm::Value* dumpLLVM() override;
-        std::unique_ptr<IExpression> constantFold() override;
-
+        explicit NullExpression();
+        void toMermaid() override;
+        void toIR() override;
+        std::unique_ptr<Expression> constantFold() override;
         bool isConstant() override;
     };
 }
-#endif // FLEX_BISON_LLVM_EXPRESSION_HPP
+using Operator = Compiler::AbstractSyntaxTree::Node::Operator;
+using Expr = Compiler::AbstractSyntaxTree::Node::Expression;
+using ExprPtr = std::unique_ptr<Expr>;
+using NullExpr = Compiler::AbstractSyntaxTree::Node::NullExpression;
+using NullExprPtr = std::unique_ptr<NullExpr>;
+inline auto& opName = Compiler::AbstractSyntaxTree::Node::operatorName;
+#endif // SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_EXPRESSION_HPP

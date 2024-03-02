@@ -1,8 +1,26 @@
 //
-// Created by venty on 2024/2/28.
+// Created by 风唤长河 on 2024/2/28.
 //
 
-#ifndef FLEX_BISON_LLVM_BINARYEXPRESSION_HPP
-#define FLEX_BISON_LLVM_BINARYEXPRESSION_HPP
+#ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BINARY_EXPRESSION_HPP
+#define SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BINARY_EXPRESSION_HPP
+#include "Expression.hpp"
+namespace Compiler::AbstractSyntaxTree::Node {
+    class BinaryExpression : public Expr
+    {
+    public:
+        explicit BinaryExpression(ExprPtr left, Operator op, ExprPtr right);
+        ExprPtr left;
+        Operator op;
+        ExprPtr right;
+        
+        void toMermaid() override;
+        void toIR() override;
+        ExprPtr constantFold() override;
+        bool isConstant() override;
+    };
 
-#endif //FLEX_BISON_LLVM_BINARYEXPRESSION_HPP
+}
+using BinExpr = Compiler::AbstractSyntaxTree::Node::BinaryExpression;
+using BinExprPtr = std::unique_ptr<BinExpr>;
+#endif //SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BINARY_EXPRESSION_HPP

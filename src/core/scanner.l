@@ -3,14 +3,11 @@
 #include <climits>
 #include <cstdlib>
 #include "Driver.hpp"
-#include "parser.hpp"
 %}
-%option noyywrap nounput noinput batch debug
+%option noyywrap nounput noinput batch debug nodefault
 %{
     yy::parser::symbol_type make_NUMBER(const std::string&s,const yy::parser::location_type& loc);
 %}
-
-
 
 %{
     # define YY_USER_ACTION loc.columns(yyleng);
@@ -20,7 +17,7 @@
     yy::location& loc=driver.location;
     loc.step();
 %}
-
+"," {return yy::parser::make_COMMA(loc);}
 ";" {return yy::parser::make_SEMICOLON(loc);}
 "(" {return yy::parser::make_LPAREN(loc);}
 ")" {return yy::parser::make_RPAREN(loc);}
@@ -45,8 +42,12 @@
 
 
 [0-9]+ {return make_NUMBER(yytext, loc);}
-"int" {return yy::parser::make_TYPE_INT("int", loc);}
-"return" {return yy::parser::make_KEYWORD_RETURN("return",loc);}
+"int" {return yy::parser::make_TYPE_INT(loc);}
+"void" {return yy::parser::make_TYPE_VOID(loc);}
+"float" {return yy::parser::make_TYPE_FLOAT(loc);}
+"const" {return yy::parser::make_CONST(loc);}
+
+"return" {return yy::parser::make_RETURN(loc);}
 [ \t\r]+ {loc.step();}
 
 \n+ {loc.lines(yyleng); loc.step();}
@@ -72,39 +73,13 @@ yy::parser::symbol_type make_NUMBER(const std::string&s,const yy::parser::locati
     return yy::parser::make_INT_CONST(i32, loc);
 }
 
-void Compiler::Driver::scan_begin() {
-    yy_flex_debug=trace_scanning;
-    if (this->inputFileName.empty() || this->inputFileName=="-") {
-        yyin=stdin;
-    } else if (! (yyin=fopen(this->inputFileName.c_str(), "r"))) {
-        throw std::runtime_error("cannot open file: " + this->inputFileName);
-    }
-    if (this->outputFileName.empty() || this->outputFileName=="-") {
-        yyout=stdout;
-    } else if (! (yyout=fopen(this->outputFileName.c_str(), "w"))) {
-        throw std::runtime_error("cannot open file: " + this->outputFileName);
-    }
-    if (this->errorFileName.empty() || this->errorFileName=="-") {
-        ;
-    } else {
-        freopen(this->errorFileName.c_str(), "w", stderr);
-    }
+void Driver::scan_begin() {
+    yy_flex_debug=this->traceScanning;
+    yyin=freopen(this->sourceFileName.empty() || this->sourceFileName=="-" ? nullptr : this->sourceFileName.c_str(), "r", stdin);
 }
 
-void Compiler::Driver::scan_end() {
-    if (this->inputFileName.empty() || this->inputFileName=="-") {
-        ;
-    } else {
+void Driver::scan_end() {
+    if (yyin) {
         fclose(yyin);
-    }
-    if (this->outputFileName.empty() || this->outputFileName=="-") {
-        ;
-    } else {
-        fclose(yyout);
-    }
-    if (this->errorFileName.empty() || this->errorFileName=="-") {
-        ;
-    } else {
-        fclose(stderr);
     }
 }

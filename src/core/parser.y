@@ -1,12 +1,18 @@
 %skeleton "lalr1.cc"
 
 %code requires {
-  #include <memory>
-  #include <string>
-  #include "Header.hpp"
-  namespace Compiler {
-    class Driver;
-  }
+    #include "Program.hpp"
+    #include "Int32.hpp"
+    #include "UnaryExpression.hpp"
+    #include "BinaryExpression.hpp"
+    #include "Definition.hpp"
+    #include "Declaration.hpp"
+    #include "Statement.hpp"
+    #include "FunctionDefinition.hpp"
+    namespace Compiler::Core {
+        class Driver;
+    }
+    using Driver = Compiler::Core::Driver;
 }
 
 %code {
@@ -15,7 +21,7 @@
 
 %language "c++"
 %locations
-%param { Compiler::Driver &driver }
+%param { Driver &driver }
 
 %define api.value.type variant
 %define api.token.raw
@@ -27,121 +33,221 @@
 %define parse.lac full
 %define parse.trace
 
-
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::CompilationUnit> > CompUnit
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::FunctionDefinition> > FuncDef
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::Type> > FuncType
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::Block> > Block
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::Statement> > Stmt
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::Expression::Int32> > Number
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::Expression::Identifier> > Ident
-%type < std::unique_ptr<Compiler::AbstractSyntaxTree::Expression::IExpression> > Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
-%type < Compiler::AbstractSyntaxTree::Expression::Operator > UNARYOP
+%type < ProgramPtr > Program
+%type < BlockItemList > CompUnit CompUnitList
+%type < FuncDefPtr > FuncDef
+%type < BlockPtr > Block
+%type < StmtPtr > Stmt
+%type < Int32Ptr > Number
+%type < IdentPtr > Ident LVal
+%type < BlockItemList > VarDecl ConstDecl Decl  BlockItem BlockItemList VarDefList ConstDefList
+%type < DefPtr > VarDef ConstDef
+%type < ExprPtr > ConstInitVal ConstExp InitVal
+%type < ExprPtr > Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
+%type < Operator > UNARYOP
 %token<std::string> IDENT
-%token<std::string> KEYWORD_RETURN
-%token<std::string> TYPE_INT
+%token RETURN CONST
+%token TYPE_INT TYPE_VOID TYPE_FLOAT
 %token<std::int32_t> INT_CONST
-%token LPAREN RPAREN LBRACE RBRACE SEMICOLON PLUS MINUS STAR SLASH PERCENT AND OR EQ NE LT GT LE GE NOT ASSIGN
+%token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA PLUS MINUS STAR SLASH PERCENT AND OR EQ NE LT GT LE GE NOT ASSIGN 
 
 
 %%
-%start CompUnit;
-CompUnit: FuncDef {
-              driver.result = std::make_unique<Compiler::AbstractSyntaxTree::CompilationUnit>(std::move($1));
-            }
-        ;
+%start Program;
 
-FuncDef: FuncType Ident LPAREN RPAREN Block {
-                $$ = std::make_unique<Compiler::AbstractSyntaxTree::FunctionDefinition>(std::move($1), std::move($2), std::move($5));
-            }
+
+Program: CompUnitList { $$ = std::make_unique< Program >(); $$->block->append(std::move($1)); driver.program = std::move($$); }
        ;
 
-FuncType: TYPE_INT {
-                $$ = std::make_unique<Compiler::AbstractSyntaxTree::Type>("int");
+CompUnitList: CompUnit { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.insert($$.end(), std::make_move_iterator($1.begin()), std::make_move_iterator($1.end())); }
+             | CompUnitList CompUnit { $$ = std::move($1); $$.insert($$.end(), std::make_move_iterator($2.begin()), std::make_move_iterator($2.end())); }
+             ;
+
+CompUnit: FuncDef {
+                $$ = std::vector< std::unique_ptr< BlockItem > >();
+                $$.push_back(std::move($1));
+            }
+        | Decl {
+             $$ = std::move($1);
             }
         ;
 
-Block: LBRACE Stmt RBRACE { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Block>(std::move($2)); }
-     ;
+FuncDef: TYPE_INT Ident LPAREN RPAREN Block {
+                $$ = std::make_unique< FuncDef >(Type::INT, std::move($2), std::move($5));
+            }
+       | TYPE_VOID Ident LPAREN RPAREN Block {
+                $$ = std::make_unique< FuncDef >(Type::VOID, std::move($2), std::move($5));
+            }
+        | TYPE_FLOAT Ident LPAREN RPAREN Block {
+                $$ = std::make_unique< FuncDef >(Type::FLOAT, std::move($2), std::move($5));
+            }
+        ;
 
-Stmt: KEYWORD_RETURN Exp SEMICOLON { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Statement>(std::move($2));}
+Block: LBRACE RBRACE { $$ = std::make_unique< Block >(); }
+     | LBRACE BlockItemList RBRACE { $$ = std::make_unique< Block >(std::move($2)); }
     ;
 
-Number: INT_CONST { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::Int32>($1); }
+BlockItem: Stmt { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); }
+         | Decl { $$ = std::move($1); }
+         ;
+
+BlockItemList: BlockItem { $$ = std::move($1); }
+             | BlockItemList BlockItem { $$ = std::move($1); $$.insert($$.end(), std::make_move_iterator($2.begin()), std::make_move_iterator($2.end())); }
+             ;
+
+Stmt: LVal ASSIGN Exp SEMICOLON { $$ = std::make_unique< AssignStmt >(std::move($1), std::move($3)); }
+    | RETURN Exp SEMICOLON { $$ = std::make_unique< ReturnStmt >(std::move($2)); }
+    ;
+
+LVal: Ident { $$ = std::move($1); }
+
+Number: INT_CONST { $$ = std::make_unique< Int32 >($1); }
       ;
 
-Ident: IDENT { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::Identifier>($1); }
+Ident: IDENT { $$ = std::make_unique< Ident >($1); }
       ;
 
 Exp: LOrExp { $$ = std::move($1); }
     ;
 
-UNARYOP: MINUS { $$ = Compiler::AbstractSyntaxTree::Expression::Operator::MINUS; }
-       | NOT { $$ = Compiler::AbstractSyntaxTree::Expression::Operator::NOT; }
-       | PLUS { $$ = Compiler::AbstractSyntaxTree::Expression::Operator::PLUS; }
+UNARYOP: MINUS { $$ = Operator::MINUS; }
+       | NOT { $$ =Operator::NOT; }
+       | PLUS { $$ = Operator::PLUS; }
        ;
 
 UnaryExp: PrimaryExp { $$ = std::move($1); }
         | UNARYOP UnaryExp {
             switch($1){
-                case Compiler::AbstractSyntaxTree::Expression::Operator::MINUS:
-                    $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::UnaryExpression>(std::move($2), Compiler::AbstractSyntaxTree::Expression::Operator::MINUS);
+                case Operator::MINUS:
+                    $$ = std::make_unique< UnaryExpr >(Operator::MINUS, std::move($2));
                     break;
-                case Compiler::AbstractSyntaxTree::Expression::Operator::NOT:
-                    $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::UnaryExpression>(std::move($2), Compiler::AbstractSyntaxTree::Expression::Operator::NOT);
+                case Operator::NOT:
+                    $$ = std::make_unique< UnaryExpr >(Operator::NOT, std::move($2));
                     break;
-                case Compiler::AbstractSyntaxTree::Expression::Operator::PLUS:
+                case Operator::PLUS:
                     $$ = std::move($2);
                     break;
                 default:
                     break;
             }
         }
-        | Ident { $$ = std::move($1); }
         ;
 
 PrimaryExp: Number { $$ = std::move($1); }
           | LPAREN Exp RPAREN { $$ = std::move($2); }
+          | LVal { $$ = std::move($1); }
           ;
 
 MulExp: UnaryExp { $$ = std::move($1); }
-        | MulExp STAR UnaryExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::MUL); }
-        | MulExp SLASH UnaryExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::DIV); }
-        | MulExp PERCENT UnaryExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::MOD); }
+        | MulExp STAR UnaryExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::MUL, std::move($3)); }
+        | MulExp SLASH UnaryExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::DIV, std::move($3)); }
+        | MulExp PERCENT UnaryExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::MOD, std::move($3)); }
         ;
 
 AddExp: MulExp { $$ = std::move($1); }
-        | AddExp PLUS MulExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(
-        std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::ADD); }
-        | AddExp MINUS MulExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::SUB); }
+        | AddExp PLUS MulExp { $$ = std::make_unique< BinExpr >(std::move($1),  Operator::ADD, std::move($3)); }
+        | AddExp MINUS MulExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::SUB, std::move($3)); }
         ;
 
 RelExp: AddExp { $$ = std::move($1); }
-        | RelExp LT AddExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::LT); }
-        | RelExp GT AddExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::GT); }
-        | RelExp LE AddExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::LE); }
-        | RelExp GE AddExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::GE); }
+        | RelExp LT AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::LT, std::move($3)); }
+        | RelExp GT AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::GT, std::move($3)); }
+        | RelExp LE AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::LE, std::move($3)); }
+        | RelExp GE AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::GE, std::move($3)); }
         ;
 
 EqExp: RelExp { $$ = std::move($1); }
-        | EqExp EQ RelExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::EQ); }
-        | EqExp NE RelExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::NE); }
+        | EqExp EQ RelExp { $$ = std::make_unique< BinExpr >(std::move($1),Operator::EQ, std::move($3)); }
+        | EqExp NE RelExp { $$ = std::make_unique< BinExpr >(std::move($1),Operator::NE, std::move($3)); }
         ;
 
 
 LAndExp: EqExp { $$ = std::move($1); }
-        | LAndExp AND EqExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::AND); }
+        | LAndExp AND EqExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::AND, std::move($3)); }
         ;
 
 LOrExp: LAndExp { $$ = std::move($1); }
-        | LOrExp OR LAndExp { $$ = std::make_unique<Compiler::AbstractSyntaxTree::Expression::BinaryExpression>(std::move($1), std::move($3), Compiler::AbstractSyntaxTree::Expression::Operator::OR); }
+        | LOrExp OR LAndExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::OR, std::move($3)); }
         ;
         
+
+Decl: VarDecl { $$ = std::move($1); }
+    | ConstDecl { $$ = std::move($1); }
+    ;
+
+ConstDecl: CONST TYPE_INT ConstDefList SEMICOLON {
+    $$ = std::vector< std::unique_ptr< BlockItem > >();
+    for(auto &def : $3){
+        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        auto decl = std::make_unique< Decl >(Type::INT, std::move(ident));
+        $$.push_back(std::move(decl));
+        $$.push_back(std::move(def));
+    }
+}
+         | CONST TYPE_FLOAT ConstDefList SEMICOLON { 
+    $$ = std::vector< std::unique_ptr< BlockItem > >();
+    for(auto &def : $3){
+        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        auto decl = std::make_unique< Decl >(Type::FLOAT, std::move(ident));
+        $$.push_back(std::move(decl));
+        $$.push_back(std::move(def));
+    }
+}
+         ;
+
+ConstDefList: ConstDef { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); }
+            | ConstDefList COMMA ConstDef { $$ = std::move($1); $$.push_back(std::move($3)); }
+            ;
+
+ConstDef: Ident ASSIGN ConstInitVal { $$ = std::make_unique< Def >(std::move($1), std::move($3)); }
+        ;
+
+ConstInitVal: ConstExp { $$ = std::move($1); }
+            ;
+
+ConstExp: Exp { $$ = std::move($1); }
+        ;
+
+VarDecl: TYPE_INT VarDefList SEMICOLON {
+    $$ = std::vector< std::unique_ptr< BlockItem > >();
+    for(auto &def : $2){
+        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        auto decl = std::make_unique< Decl >(Type::INT, std::move(ident));
+        $$.push_back(std::move(decl));
+        $$.push_back(std::move(def));
+    }
+}
+        | TYPE_FLOAT VarDefList SEMICOLON {
+    $$ = std::vector< std::unique_ptr< BlockItem > >();
+    for(auto &def : $2){
+        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
+        auto decl = std::make_unique< Decl >(Type::FLOAT, std::move(ident));
+        $$.push_back(std::move(decl));
+        $$.push_back(std::move(def));
+    }
+}
+        ;
+
+VarDefList: VarDef { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); }
+            | VarDefList COMMA VarDef { $$ = std::move($1); $$.push_back(std::move($3)); }
+            ;
+
+
+VarDef: Ident { auto nullExpr = std::make_unique< NullExpr > (); $$ = std::make_unique< Def >(std::move($1), std::move(nullExpr)); }
+        | Ident ASSIGN InitVal { $$ = std::make_unique< Def >(std::move($1), std::move($3)); }
+        ;
+
+InitVal: Exp { $$ = std::move($1); }
+         ;
+
+
+
+
 
 
 %%
 
 void yy::parser::error(const location_type& l, const std::string& m) {
-  driver.error(l, m);
+     driver.error(l, m);
 }
 

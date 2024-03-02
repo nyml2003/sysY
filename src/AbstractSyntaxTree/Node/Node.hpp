@@ -1,5 +1,5 @@
 //
-// Created by venty on 2024/2/23.
+// Created by 风唤长河 on 2024/2/23.
 //
 
 #ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_NODE_HPP
@@ -8,18 +8,26 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <iostream>
+namespace Compiler::AbstractSyntaxTree::Node {
+    class Node;
+}
 
 namespace Compiler::AbstractSyntaxTree::Node {
+    inline size_t maxId = 0;
     class Node {
     public:
         explicit Node();
         virtual ~Node() = default;
-        void generate();
+        virtual void toMermaid()=0;
+        virtual void toIR()=0;
+        virtual void optimize()=0;
         size_t id;
         std::string typeName;
-        std::vector<std::unique_ptr<Node> > children;
-    private:
-        static size_t maxId;
     };
 }
-#endif //FLEX_BISON_LLVM_INTERFACE_ABSTRACT_SYNTAX_TREE_HPP
+using Node = Compiler::AbstractSyntaxTree::Node::Node;
+using NodePtr = std::unique_ptr<Node>;
+using NodeList = std::vector<NodePtr>;
+inline auto& maxId = Compiler::AbstractSyntaxTree::Node::maxId;
+#endif //SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_NODE_HPP

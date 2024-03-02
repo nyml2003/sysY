@@ -1,5 +1,5 @@
 FROM ubuntu:22.04
-LABEL authors="venty"
+LABEL authors="风唤长河"
 
 RUN mv /etc/apt/sources.list /etc/apt/sources.list.bak
 COPY sources.list /etc/apt/
@@ -19,12 +19,7 @@ RUN apt-get update && apt-get install -y \
     sudo \
     vim \
     flex \
-    bison 
-
-
-
-
-
+    bison
 
 
 

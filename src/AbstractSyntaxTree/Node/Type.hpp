@@ -1,18 +1,24 @@
 //
-// Created by venty on 2024/2/23.
+// Created by 风唤长河 on 2024/2/23.
 //
 
-#ifndef FLEX_BISON_LLVM_TYPE_HPP
-#define FLEX_BISON_LLVM_TYPE_HPP
-#include "Header.hpp"
-#include <string>
-namespace Compiler::AbstractSyntaxTree {
-    class Type : public Node {
-    public:
-        explicit Type(std::string value);
-        std::string value;
-        void dump();
-        void dumpMermaid();
+#ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_TYPE_HPP
+#define SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_TYPE_HPP
+#include "Node.hpp"
+#include <map>
+namespace Compiler::AbstractSyntaxTree::Node {
+    enum class Type {
+        UNDEFINED,
+        INT,
+        VOID,
+        FLOAT,
+    };
+    inline std::map<Type, std::string> typeName = {
+            {Type::INT, "int"},
+            {Type::VOID, "void"},
+            {Type::FLOAT, "float"},
     };
 }
-#endif //FLEX_BISON_LLVM_TYPE_HPP
+using Type = Compiler::AbstractSyntaxTree::Node::Type;
+inline auto& innerType = Compiler::AbstractSyntaxTree::Node::typeName;
+#endif //SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_TYPE_HPP

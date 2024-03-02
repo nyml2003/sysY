@@ -1,22 +1,25 @@
 //
-// Created by venty on 2024/2/23.
+// Created by 风唤长河 on 2024/2/23.
 //
 
-#ifndef FLEX_BISON_LLVM_FUNCTION_DEFINITION_HPP
-#define FLEX_BISON_LLVM_FUNCTION_DEFINITION_HPP
-#include "Header.hpp"
-
-namespace Compiler::AbstractSyntaxTree {
-    class FunctionDefinition : public Node {
+#ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_FUNCTION_DEFINITION_HPP
+#define SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_FUNCTION_DEFINITION_HPP
+#include "Type.hpp"
+#include "Identifier.hpp"
+#include "Block.hpp"
+namespace Compiler::AbstractSyntaxTree::Node {
+    class FunctionDefinition : public BlockItem {
     public:
-        explicit FunctionDefinition(std::unique_ptr<Type> type, std::unique_ptr<Expression::Identifier> identifier, std::unique_ptr<Block> block);
-        std::unique_ptr<Type> type;
-        std::unique_ptr<Expression::Identifier> identifier;
-        std::unique_ptr<Block> block;
-        void dump();
-        void dumpMermaid();
-        void dumpLLVM(llvm::Module* module);
+        explicit FunctionDefinition(Type type, IdentPtr ident, BlockPtr block);
+        Type type;
+        IdentPtr ident;
+        BlockPtr block;
+        void toMermaid() override;
+        void toIR() override;
         void optimize() override;
     };
+    
 }
-#endif //FLEX_BISON_LLVM_FUNCTION_DEFINITION_HPP
+using FuncDef = Compiler::AbstractSyntaxTree::Node::FunctionDefinition;
+using FuncDefPtr = std::unique_ptr<FuncDef>;
+#endif //SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_FUNCTION_DEFINITION_HPP

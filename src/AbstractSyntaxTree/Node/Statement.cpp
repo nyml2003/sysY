@@ -1,35 +1,45 @@
 //
-// Created by venty on 2024/2/23.
+// Created by 风唤长河 on 2024/2/23.
 //
-
-#include "Header.hpp"
+#include "Statement.hpp"
+#include "Expression.hpp"
 #include <iostream>
-namespace Compiler::AbstractSyntaxTree {
-    Statement::Statement(std::unique_ptr<Expression::IExpression> expression) : expression(std::move(expression)) {}
-    void Statement::dump(){
-        switch (dumpType) {
-            case DumpType::AST_MERMAID:
-                dumpMermaid();
-                break;
-            case DumpType::IR_LLVM:
-                break;
-                default:
-               Compiler::driver.errorFile << "FunctionDefinition::dump() is not implemented" << std::endl;
-        }
+
+namespace Compiler::AbstractSyntaxTree::Node {
+
+    AssignStatement::AssignStatement(IdentPtr ident, ExprPtr def) : def(std::make_unique<Definition>(std::move(ident), std::move(def))) {
+        this->typeName = "Assign";
     }
 
-    void Statement::dumpMermaid() {
-        std::cout<< id << "[" << "Statement" << "]\n";
-        std::cout << id << "-->" << expression->id << "\n";
-        expression->dump();
+    void AssignStatement::toMermaid() {
+        this->def->toMermaid();
     }
 
-    void Statement::dumpLLVM() {
-        llvm::Value* value = expression->dumpLLVM();
-        builder.CreateRet(value);
+    void AssignStatement::toIR() {
+        // TODO
     }
 
-    void Statement::optimize() {
-        expression = std::move(expression->constantFold());
+    void AssignStatement::optimize() {
+        this->def->optimize();
     }
+
+    ReturnStatement::ReturnStatement(ExprPtr expr) : expr(std::move(expr)) {
+        this->typeName = "Return";
+    }
+
+    void ReturnStatement::toMermaid() {
+        std::cout << this->id << "[" << this->typeName << "]" << std::endl;
+        std::cout << this->id << "-->" << this->expr->id << std::endl;
+        this->expr->toMermaid();
+    }
+
+    void ReturnStatement::toIR() {
+        // TODO
+    }
+
+    void ReturnStatement::optimize() {
+        this->expr->optimize();
+    }
+
+
 }

@@ -1,20 +1,34 @@
 //
-// Created by venty on 2024/2/23.
+// Created by 风唤长河 on 2024/2/23.
 //
 
-#ifndef FLEX_BISON_LLVM_BLOCK_HPP
-#define FLEX_BISON_LLVM_BLOCK_HPP
-#include "Node/Node.hpp"
-#include "Statement.hpp"
-namespace Compiler::AbstractSyntaxTree {
+#ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BLOCK_HPP
+#define SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BLOCK_HPP
+#include <vector>
+#include "Type.hpp"
+namespace Compiler::AbstractSyntaxTree::Node {
+    class BlockItem : virtual public Node
+    {
+    public:
+        void toMermaid() override = 0;
+        void toIR() override = 0;
+        void optimize() override = 0;
+    };
     class Block : public Node {
     public:
-        explicit Block(std::unique_ptr<Statement> statement);
-        std::unique_ptr<Statement> statement;
-        void dump() override;
-        void dumpMermaid();
-        void dumpLLVM(llvm::Function* function);
+        explicit Block();
+        explicit Block(std::vector< std::unique_ptr<BlockItem> > items);
+        std::vector< std::unique_ptr<BlockItem> >  items;
+        void append(std::unique_ptr<BlockItem> item);
+        void append(std::vector<std::unique_ptr<BlockItem>> items);
+        void toMermaid() override;
+        void toIR() override;
         void optimize() override;
     };
 }
-#endif //FLEX_BISON_LLVM_BLOCK_HPP
+using Block = Compiler::AbstractSyntaxTree::Node::Block;
+using BlockPtr = std::unique_ptr<Block>;
+using BlockItem = Compiler::AbstractSyntaxTree::Node::BlockItem;
+using BlockItemPtr = std::unique_ptr<BlockItem>;
+using BlockItemList = std::vector<BlockItemPtr>;
+#endif //SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BLOCK_HPP

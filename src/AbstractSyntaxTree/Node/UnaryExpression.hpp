@@ -1,24 +1,23 @@
 //
-// Created by venty on 2024/2/28.
+// Created by 风唤长河 on 2024/2/28.
 //
 
-#ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BINARY_EXPRESSION_HPP
-#define SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BINARY_EXPRESSION_HPP
+#ifndef SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_UNARY_EXPRESSION_HPP
+#define SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_UNARY_EXPRESSION_HPP
 #include "Expression.hpp"
 namespace Compiler::AbstractSyntaxTree::Node {
-    class BinaryExpression : public Expr
+    class UnaryExpression : public Expr
     {
     public:
-        explicit BinaryExpression(ExprPtr left, Operator op, ExprPtr right);
-        ExprPtr left;
-        ExprPtr right;
+        UnaryExpression(Operator op, ExprPtr expr);
         Operator op;
+        ExprPtr expr;
         void toMermaid() override;
         void toIR() override;
         ExprPtr constantFold() override;
         bool isConstant() override;
     };
-    using BinExpr = Compiler::AbstractSyntaxTree::Node::BinaryExpression;
-    using BinExprPtr = std::unique_ptr<BinExpr>;
 }
-#endif //SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_BINARY_EXPRESSION_HPP
+using UnaryExpr = Compiler::AbstractSyntaxTree::Node::UnaryExpression;
+using UnaryExprPtr = std::unique_ptr<UnaryExpr>;
+#endif //SYSY_COMPILER_ABSTRACT_SYNTAX_TREE_UNARY_EXPRESSION_HPP

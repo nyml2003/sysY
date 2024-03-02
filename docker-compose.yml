@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["/bin/bash"]
+    command: ["/bin/bash", "-c", "/app/start.sh"]
     ports:
       - "8022:22"
     tty: true
