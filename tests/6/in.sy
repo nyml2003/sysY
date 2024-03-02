@@ -1,4 +1,5 @@
 int f(){
-float c;
-int b=2*c;
+    int b=2*c;
+c=1;
+
 }

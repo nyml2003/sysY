@@ -2,4 +2,5 @@ cmake-*
 dev_config
 .idea
 build/
-.vscode
+.vscode/
+.cache/
