@@ -1,20 +1,82 @@
 #include "AST.hpp"
 #include <iostream>
+#include <fstream>
+#include "driver.hpp"
 namespace Compiler::AST
 {
-    
+
     Node::Node()
     {
         nodeId = maxASTNodeId++;
+        begin = driver.location.begin;
+        end = driver.location.end;
     }
     size_t Node::maxASTNodeId = 0;
+
+    void Node::printLocation(const std::string &message)
+    {
+        std::ifstream targetFile(driver.sourceFileName);
+        std::vector<std::string> lines;
+        std::string line;
+        for (int i = 0; i < this->begin.line - 1; i++)
+        {
+            std::getline(targetFile, line);
+        }
+        for (int i = this->begin.line - 1; i < this->end.line; i++)
+        {
+            std::getline(targetFile, line);
+            lines.push_back(line);
+        }
+        for (size_t i = 0; i < lines.size(); i++)
+        {
+            std::cerr << "|" << lines[i] << std::endl;
+            std::cerr << "|";
+            if (i == 0)
+            {
+                for (int j = 0; j < this->begin.column - 1; j++)
+                {
+                    std::cerr << " ";
+                }
+                if (this->begin.line == this->end.line)
+                {
+                    for (int j = this->begin.column - 1; j < this->end.column - 1; j++)
+                    {
+                        std::cerr << "^";
+                    }
+                }
+                else
+                {
+                    for (size_t j = this->begin.column - 1; j < lines[i].size(); j++)
+                    {
+                        std::cerr << "^";
+                    }
+                }
+            }
+            else if (i == lines.size() - 1)
+            {
+                for (int j = 0; j < this->end.column - 1; j++)
+                {
+                    std::cerr << "^";
+                }
+            }
+            else
+            {
+                for (size_t j = 0; j < lines[i].size(); j++)
+                {
+                    std::cerr << " ";
+                }
+            }
+            std::cerr << std::endl;
+        }
+        std::cerr << "| Error: " << message << std::endl;
+    }
 
     void CompUnit::toMermaid()
     {
         for (size_t i = 0; i < children.size(); i++)
         {
             std::cout << nodeId << "[CompUnit]";
-            std::cout <<  "--" << i << "--->" << children[i]->nodeId << std::endl;
+            std::cout << "--" << i << "--->" << children[i]->nodeId << std::endl;
             children[i]->toMermaid();
         }
     }
@@ -25,6 +87,27 @@ namespace Compiler::AST
         for (auto &child : _children)
         {
             this->children.push_back(std::move(child));
+        }
+        begin = children[0]->begin;
+        end = children[children.size() - 1]->end;
+    }
+
+    void CompUnit::analyze()
+    {
+        if (auto last = dynamic_cast<FuncDef *>(children[children.size() - 1].get()); last == nullptr)
+        {
+            printLocation("The last declaration must be a function definition");
+            exit(1);
+        }else{
+            if (auto name = dynamic_cast<Ident *>(last->ident.get())->name; name != "main")
+            {
+                printLocation("The last function must be main");
+                exit(1);
+            }
+        }
+        for (auto &child : children)
+        {
+            child->analyze();
         }
     }
 
@@ -45,17 +128,23 @@ namespace Compiler::AST
         }
     }
 
+    void Decl::analyze()
+    {
+        // TODO
+    }
+
     void Decl::addDecorator(Decorator decorator)
     {
+        this->begin.column = 1;
         decorators.push_back(decorator);
     }
 
     Decl::Decl(NodePtr type, std::vector<NodePtr> defList) : defList(std::move(defList))
     {
-        this->type = std::make_unique<Type>(dynamic_cast<Type*>(type.get())->type);
+        this->type = std::make_unique<Type>(dynamic_cast<Type *>(type.get())->type);
+        this->begin = type->begin;
+        this->end = this->defList[this->defList.size() - 1]->end;
     }
-
-
 
     void Type::toMermaid()
     {
@@ -66,8 +155,20 @@ namespace Compiler::AST
     {
     }
 
+    void Type::analyze()
+    {
+        // TODO
+    }
+
     Def::Def(NodePtr lval, NodePtr initVal) : lval(std::move(lval)), initVal(std::move(initVal))
     {
+        begin = this->lval->begin;
+        end = this->initVal->end;
+    }
+
+    void Def::analyze()
+    {
+        // TODO
     }
 
     void Def::toMermaid()
@@ -91,12 +192,21 @@ namespace Compiler::AST
         }
     }
 
+    void Lval::analyze()
+    {
+        // TODO
+    }
+
     Lval::Lval(NodePtr ident, std::vector<NodePtr> dim) : ident(std::move(ident)), dim(std::move(dim))
     {
+        begin = this->ident->begin;
+        end = this->dim[this->dim.size() - 1]->end;
     }
 
     Lval::Lval(NodePtr ident) : ident(std::move(ident))
     {
+        begin = this->ident->begin;
+        end = this->ident->end;
     }
 
     void InitVal::toMermaid()
@@ -109,18 +219,35 @@ namespace Compiler::AST
         }
     }
 
+    void InitVal::analyze()
+    {
+        // TODO
+    }
+
     InitVal::InitVal(std::vector<NodePtr> children) : children(std::move(children))
     {
+        begin = this->children[0]->begin;
+        end = this->children[this->children.size() - 1]->end;
     }
 
     InitVal::InitVal(NodePtr child)
     {
         children.push_back(std::move(child));
+        begin = this->children[0]->begin;
+        end = this->children[0]->end;
     }
-
 
     FuncDef::FuncDef(NodePtr retType, NodePtr ident, NodePtr block) : retType(std::move(retType)), ident(std::move(ident)), block(std::move(block))
     {
+        begin = this->retType->begin;
+        end = this->block->end;
+        end.line += 1;
+        end.column = 1;
+    }
+
+    void FuncDef::analyze()
+    {
+        // TODO
     }
 
     void FuncDef::toMermaid()
@@ -140,6 +267,13 @@ namespace Compiler::AST
 
     Block::Block(std::vector<NodePtr> children) : children(std::move(children))
     {
+        begin = this->children[0]->begin;
+        end = this->children[this->children.size() - 1]->end;
+    }
+
+    void Block::analyze()
+    {
+        // TODO
     }
 
     void Block::toMermaid()
@@ -154,6 +288,13 @@ namespace Compiler::AST
 
     AssignStmt::AssignStmt(NodePtr lval, NodePtr expr) : lval(std::move(lval)), expr(std::move(expr))
     {
+        begin = this->lval->begin;
+        end = this->expr->end;
+    }
+
+    void AssignStmt::analyze()
+    {
+        // TODO
     }
 
     void AssignStmt::toMermaid()
@@ -167,6 +308,13 @@ namespace Compiler::AST
 
     ExpStmt::ExpStmt(NodePtr expr) : expr(std::move(expr))
     {
+        begin = this->expr->begin;
+        end = this->expr->end;
+    }
+
+    void ExpStmt::analyze()
+    {
+        // TODO
     }
 
     void ExpStmt::toMermaid()
@@ -176,12 +324,24 @@ namespace Compiler::AST
         expr->toMermaid();
     }
 
+
+
     IfStmt::IfStmt(NodePtr cond, NodePtr thenStmt, NodePtr elseStmt) : cond(std::move(cond)), thenStmt(std::move(thenStmt)), elseStmt(std::move(elseStmt))
     {
+        begin = this->cond->begin;
+        end = this->elseStmt->end;
     }
+
 
     IfStmt::IfStmt(NodePtr cond, NodePtr thenStmt) : cond(std::move(cond)), thenStmt(std::move(thenStmt)), elseStmt(nullptr)
     {
+        begin = this->cond->begin;
+        end = this->thenStmt->end;
+    }
+
+    void IfStmt::analyze()
+    {
+        // TODO
     }
 
     void IfStmt::toMermaid()
@@ -200,6 +360,13 @@ namespace Compiler::AST
 
     WhileStmt::WhileStmt(NodePtr expr, NodePtr stmt) : expr(std::move(expr)), stmt(std::move(stmt))
     {
+        begin = this->expr->begin;
+        end = this->stmt->end;
+    }
+
+    void WhileStmt::analyze()
+    {
+        // TODO
     }
 
     void WhileStmt::toMermaid()
@@ -215,6 +382,11 @@ namespace Compiler::AST
     {
     }
 
+    void BreakStmt::analyze()
+    {
+        // TODO
+    }
+
     void BreakStmt::toMermaid()
     {
         std::cout << nodeId << "[BreakStmt]" << std::endl;
@@ -224,13 +396,26 @@ namespace Compiler::AST
     {
     }
 
+    void ContinueStmt::analyze()
+    {
+        // TODO
+    }
+
     void ContinueStmt::toMermaid()
     {
         std::cout << nodeId << "[ContinueStmt]" << std::endl;
     }
 
+
     ReturnStmt::ReturnStmt(NodePtr expr) : expr(std::move(expr))
     {
+        begin = this->expr->begin;
+        end = this->expr->end;
+    }
+
+    void ReturnStmt::analyze()
+    {
+        // TODO
     }
 
     void ReturnStmt::toMermaid()
@@ -242,6 +427,13 @@ namespace Compiler::AST
 
     BinaryExp::BinaryExp(NodePtr left, Operator op, NodePtr right) : left(std::move(left)), op(op), right(std::move(right))
     {
+        begin = this->left->begin;
+        end = this->right->end;
+    }
+
+    void BinaryExp::analyze()
+    {
+        // TODO
     }
 
     void BinaryExp::toMermaid()
@@ -255,6 +447,13 @@ namespace Compiler::AST
 
     UnaryExp::UnaryExp(Operator op, NodePtr expr) : op(op), expr(std::move(expr))
     {
+        begin = this->expr->begin;
+        end = this->expr->end;
+    }
+
+    void UnaryExp::analyze()
+    {
+        // TODO
     }
 
     void UnaryExp::toMermaid()
@@ -273,6 +472,11 @@ namespace Compiler::AST
         std::cout << nodeId << "[" << name << "]" << std::endl;
     }
 
+    void Ident::analyze()
+    {
+        // TODO
+    }
+
     Int32::Int32(int32_t val) : val(val)
     {
     }
@@ -282,13 +486,22 @@ namespace Compiler::AST
         std::cout << nodeId << "[" << val << "]" << std::endl;
     }
 
+    void Int32::analyze()
+    {
+        // TODO
+    }
+
     float32::float32(float val) : val(val)
     {
+    }
+
+    void float32::analyze()
+    {
+        // TODO
     }
 
     void float32::toMermaid()
     {
         std::cout << nodeId << "[" << val << "]" << std::endl;
     }
-
 }

@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-
+#include "location.hh"
 namespace Compiler::AST
 {
     enum class InnerType
@@ -64,14 +64,22 @@ namespace Compiler::AST
          * @brief 输出mermaid格式的抽象语法树
         */
         virtual void toMermaid() = 0;
+        /**
+         * @brief 分析抽象语法树
+        */
+        virtual void analyze() = 0;
         size_t nodeId;
         static size_t maxASTNodeId;
+        yy::position begin;
+        yy::position end;
+        void printLocation(const std::string& message);
     };
     using NodePtr = std::unique_ptr<Node>;
 
     struct CompUnit : public Node
     {
         void toMermaid() override;
+        void analyze() override;
         void attach(std::vector<NodePtr> chilren);
         std::vector<NodePtr> children;
     };
@@ -79,6 +87,7 @@ namespace Compiler::AST
     struct Decl : public Node
     {
         explicit Decl(NodePtr type, std::vector<NodePtr> defList);
+        void analyze() override;
         void toMermaid() override;
         void addDecorator(Decorator decorator);
         NodePtr type;
@@ -88,6 +97,7 @@ namespace Compiler::AST
 
     struct Type : public Node
     {
+        void analyze() override;
         explicit Type(InnerType type);
         void toMermaid() override;
         InnerType type;
@@ -95,6 +105,7 @@ namespace Compiler::AST
 
     struct Def : public Node
     {
+        void analyze() override;
         explicit Def(NodePtr lval, NodePtr initVal);
         void toMermaid() override;
         NodePtr lval;
@@ -103,6 +114,7 @@ namespace Compiler::AST
 
     struct Lval : public Node
     {
+        void analyze() override;
         explicit Lval(NodePtr ident, std::vector<NodePtr> dim);
         explicit Lval(NodePtr ident);
         void toMermaid() override;
@@ -112,6 +124,7 @@ namespace Compiler::AST
 
     struct InitVal : public Node
     {
+        void analyze() override;
         explicit InitVal(NodePtr child);
         explicit InitVal(std::vector<NodePtr> children);
         void toMermaid() override;
@@ -120,6 +133,7 @@ namespace Compiler::AST
 
     struct FuncDef : public Node
     {
+        void analyze() override;
         explicit FuncDef(NodePtr retType, NodePtr ident, NodePtr block);
         void toMermaid() override;
         NodePtr retType;
@@ -129,6 +143,7 @@ namespace Compiler::AST
 
     struct Block : public Node
     {
+        void analyze() override;
         explicit Block();
         explicit Block(std::vector<NodePtr> children);
         void toMermaid() override;
@@ -137,6 +152,7 @@ namespace Compiler::AST
 
     struct AssignStmt : public Node
     {
+        void analyze() override;
         explicit AssignStmt(NodePtr lval, NodePtr expr);
         void toMermaid() override;
         NodePtr lval;
@@ -145,6 +161,7 @@ namespace Compiler::AST
 
     struct ExpStmt : public Node
     {
+        void analyze() override;
         explicit ExpStmt(NodePtr expr);
         void toMermaid() override;
         NodePtr expr;
@@ -152,6 +169,7 @@ namespace Compiler::AST
 
     struct IfStmt : public Node
     {
+        void analyze() override;
         explicit IfStmt(NodePtr cond, NodePtr thenStmt, NodePtr elseStmt);
         explicit IfStmt(NodePtr cond, NodePtr thenStmt);
         void toMermaid() override;
@@ -162,6 +180,7 @@ namespace Compiler::AST
 
     struct WhileStmt : public Node
     {
+        void analyze() override;
         explicit WhileStmt(NodePtr expr, NodePtr stmt);
         void toMermaid() override;
         NodePtr expr;
@@ -170,18 +189,21 @@ namespace Compiler::AST
 
     struct BreakStmt : public Node
     {
+        void analyze() override;
         explicit BreakStmt();
         void toMermaid() override;
     };
 
     struct ContinueStmt : public Node
     {
+        void analyze() override;
         explicit ContinueStmt();
         void toMermaid() override;
     };
 
     struct ReturnStmt : public Node
     {
+        void analyze() override;
         explicit ReturnStmt(NodePtr expr);
         void toMermaid() override;
         NodePtr expr;
@@ -189,6 +211,7 @@ namespace Compiler::AST
 
     struct Int32 : public Node
     {
+        void analyze() override;
         explicit Int32(int32_t val);
         void toMermaid() override;
         int32_t val;
@@ -196,6 +219,7 @@ namespace Compiler::AST
 
     struct float32 : public Node
     {
+        void analyze() override;
         explicit float32(float val);
         void toMermaid() override;
         float val;
@@ -203,6 +227,7 @@ namespace Compiler::AST
 
     struct UnaryExp : public Node
     {
+        void analyze() override;
         explicit UnaryExp(Operator op, NodePtr expr);
         void toMermaid() override;
         Operator op;
@@ -211,6 +236,7 @@ namespace Compiler::AST
 
     struct BinaryExp : public Node
     {
+        void analyze() override;
         explicit BinaryExp(NodePtr left, Operator op, NodePtr right);
         void toMermaid() override;
         NodePtr left;
@@ -220,6 +246,7 @@ namespace Compiler::AST
 
     struct Ident : public Node
     {
+        void analyze() override;
         explicit Ident(std::string& name);
         void toMermaid() override;
         std::string name;

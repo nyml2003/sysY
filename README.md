@@ -35,21 +35,3 @@ int main(){
 ```
 
 
-
-
-```cpp
-
-vector<int> a, b;
-
-int f(vector<int> a){
-    ;
-}
-
-int main()
-{
-    f(a);
-}
-
-
-
-```
