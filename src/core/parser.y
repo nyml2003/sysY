@@ -1,14 +1,7 @@
 %skeleton "lalr1.cc"
 
 %code requires {
-    #include "Program.hpp"
-    #include "Int32.hpp"
-    #include "UnaryExpression.hpp"
-    #include "BinaryExpression.hpp"
-    #include "Definition.hpp"
-    #include "Declaration.hpp"
-    #include "Statement.hpp"
-    #include "FunctionDefinition.hpp"
+    #include "AST.hpp"
     namespace Compiler::Core {
         class Driver;
     }
@@ -33,233 +26,181 @@
 %define parse.lac full
 %define parse.trace
 
-%type < ProgramPtr > Program
-%type < BlockItemList > CompUnit CompUnitList
-%type < FuncDefPtr > FuncDef
-%type < BlockPtr > Block
-%type < StmtPtr > Stmt
-%type < Int32Ptr > Number
-%type < IdentPtr > Ident LVal
-%type < BlockItemList > VarDecl ConstDecl Decl  BlockItem BlockItemList VarDefList ConstDefList
-%type < DefPtr > VarDef ConstDef
-%type < ExprPtr > ConstInitVal ConstExp InitVal
-%type < ExprPtr > Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
-%type < Operator > UNARYOP
+%type < Compiler::AST::NodePtr > CompUnit Decl FuncDef Type Block BlockItem Stmt Exp Cond Lval InitVal Def PrimaryExp Number UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Ident
+%type < std::vector< Compiler::AST::NodePtr > > DefList CompUnitContainer BlockItemList InitValList DimList
+%type < Compiler::AST::Operator > UNARYOP
 %token<std::string> IDENT
 %token RETURN CONST
 %token TYPE_INT TYPE_VOID TYPE_FLOAT
 %token<std::int32_t> INT_CONST
-%token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA PLUS MINUS STAR SLASH PERCENT AND OR EQ NE LT GT LE GE NOT ASSIGN 
+%token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA LBRACKET RBRACKET
+%token PLUS MINUS STAR SLASH PERCENT AND OR EQ NE LT GT LE GE NOT ASSIGN CONTINUE BREAK IF ELSE WHILE
 
 
 %%
-%start Program;
+%start CompUnit;
 
-
-Program: CompUnitList { $$ = std::make_unique< Program >(); $$->block->append(std::move($1)); driver.program = std::move($$); }
-       ;
-
-CompUnitList: CompUnit { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.insert($$.end(), std::make_move_iterator($1.begin()), std::make_move_iterator($1.end())); }
-             | CompUnitList CompUnit { $$ = std::move($1); $$.insert($$.end(), std::make_move_iterator($2.begin()), std::make_move_iterator($2.end())); }
-             ;
-
-CompUnit: FuncDef {
-                $$ = std::vector< std::unique_ptr< BlockItem > >();
-                $$.push_back(std::move($1));
-            }
-        | Decl {
-             $$ = std::move($1);
-            }
-        ;
-
-FuncDef: TYPE_INT Ident LPAREN RPAREN Block {
-                $$ = std::make_unique< FuncDef >(Type::INT, std::move($2), std::move($5));
-            }
-       | TYPE_VOID Ident LPAREN RPAREN Block {
-                $$ = std::make_unique< FuncDef >(Type::VOID, std::move($2), std::move($5));
-            }
-        | TYPE_FLOAT Ident LPAREN RPAREN Block {
-                $$ = std::make_unique< FuncDef >(Type::FLOAT, std::move($2), std::move($5));
-            }
-        ;
-
-Block: LBRACE RBRACE { $$ = std::make_unique< Block >(); }
-     | LBRACE BlockItemList RBRACE { $$ = std::make_unique< Block >(std::move($2)); }
+CompUnit:
+    CompUnitContainer { auto compUnit = std::make_unique< Compiler::AST::CompUnit >(); compUnit->attach(std::move($1)); driver.result = std::move(compUnit); }
     ;
 
-BlockItem: Stmt { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); }
-         | Decl { $$ = std::move($1); }
-         ;
-
-BlockItemList: BlockItem { $$ = std::move($1); }
-             | BlockItemList BlockItem { $$ = std::move($1); $$.insert($$.end(), std::make_move_iterator($2.begin()), std::make_move_iterator($2.end())); }
-             ;
-
-Stmt: LVal ASSIGN Exp SEMICOLON { $$ = std::make_unique< AssignStmt >(std::move($1), std::move($3)); std::cout<<"detect a assignment"<<std::endl;}
-    | RETURN Exp SEMICOLON { $$ = std::make_unique< ReturnStmt >(std::move($2)); }
+CompUnitContainer: 
+      Decl { $$ = std::vector< Compiler::AST::NodePtr >(); $$.push_back(std::move($1)); }
+    | FuncDef { $$ = std::vector< Compiler::AST::NodePtr >(); $$.push_back(std::move($1)); }
+    | CompUnitContainer Decl { $1.push_back(std::move($2)); $$ = std::move($1); }
+    | CompUnitContainer FuncDef { $1.push_back(std::move($2)); $$ = std::move($1); }
     ;
 
-LVal: Ident { $$ = std::move($1); }
-
-Number: INT_CONST { $$ = std::make_unique< Int32 >($1); }
-      ;
-
-Ident: IDENT { $$ = std::make_unique< Ident >($1); }
-      ;
-
-Exp: LOrExp { $$ = std::move($1); }
+Decl : 
+    Type DefList SEMICOLON { 
+        $$ = std::make_unique< Compiler::AST::Decl >(std::move($1), std::move($2));
+    }
+    | CONST Decl {
+        dynamic_cast< Compiler::AST::Decl* >($2.get())->addDecorator(Compiler::AST::Decorator::CONSTANT);
+        $$ = std::move($2);
+    }
     ;
 
-UNARYOP: MINUS { $$ = Operator::MINUS; }
-       | NOT { $$ =Operator::NOT; }
-       | PLUS { $$ = Operator::PLUS; }
-       ;
-
-UnaryExp: PrimaryExp { $$ = std::move($1); }
-        | UNARYOP UnaryExp {
-            switch($1){
-                case Operator::MINUS:
-                    $$ = std::make_unique< UnaryExpr >(Operator::MINUS, std::move($2));
-                    break;
-                case Operator::NOT:
-                    $$ = std::make_unique< UnaryExpr >(Operator::NOT, std::move($2));
-                    break;
-                case Operator::PLUS:
-                    $$ = std::move($2);
-                    break;
-                default:
-                    break;
-            }
-        }
-        ;
-
-PrimaryExp: Number { $$ = std::move($1); }
-          | LPAREN Exp RPAREN { $$ = std::move($2); }
-          | LVal { $$ = std::move($1); }
-          ;
-
-MulExp: UnaryExp { $$ = std::move($1); }
-        | MulExp STAR UnaryExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::MUL, std::move($3)); }
-        | MulExp SLASH UnaryExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::DIV, std::move($3)); }
-        | MulExp PERCENT UnaryExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::MOD, std::move($3)); }
-        ;
-
-AddExp: MulExp { $$ = std::move($1); }
-        | AddExp PLUS MulExp { $$ = std::make_unique< BinExpr >(std::move($1),  Operator::ADD, std::move($3)); }
-        | AddExp MINUS MulExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::SUB, std::move($3)); }
-        ;
-
-RelExp: AddExp { $$ = std::move($1); }
-        | RelExp LT AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::LT, std::move($3)); }
-        | RelExp GT AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::GT, std::move($3)); }
-        | RelExp LE AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::LE, std::move($3)); }
-        | RelExp GE AddExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::GE, std::move($3)); }
-        ;
-
-EqExp: RelExp { $$ = std::move($1); }
-        | EqExp EQ RelExp { $$ = std::make_unique< BinExpr >(std::move($1),Operator::EQ, std::move($3)); }
-        | EqExp NE RelExp { $$ = std::make_unique< BinExpr >(std::move($1),Operator::NE, std::move($3)); }
-        ;
-
-
-LAndExp: EqExp { $$ = std::move($1); }
-        | LAndExp AND EqExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::AND, std::move($3)); }
-        ;
-
-LOrExp: LAndExp { $$ = std::move($1); }
-        | LOrExp OR LAndExp { $$ = std::make_unique< BinExpr >(std::move($1), Operator::OR, std::move($3)); }
-        ;
-        
-
-Decl: VarDecl { $$ = std::move($1); }
-    | ConstDecl { $$ = std::move($1); }
+Type:
+    TYPE_INT { $$ = std::make_unique< Compiler::AST::Type >(Compiler::AST::InnerType::INT); }
+    | TYPE_FLOAT { $$ = std::make_unique< Compiler::AST::Type >(Compiler::AST::InnerType::FLOAT); }
+    | TYPE_VOID { $$ = std::make_unique< Compiler::AST::Type >(Compiler::AST::InnerType::VOID); }
     ;
 
-ConstDecl: CONST TYPE_INT ConstDefList SEMICOLON {
-    $$ = std::vector< std::unique_ptr< BlockItem > >();
-    for(auto &def : $3){
-        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
-        ident->begin = def->begin;
-        ident->end = def->end;
-        auto decl = std::make_unique< Decl >(Type::INT, std::move(ident));
-        $$.push_back(std::move(decl));
-        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
-            $$.push_back(std::move(def));
-        }
+Def:
+    Lval ASSIGN InitVal { $$ = std::make_unique< Compiler::AST::Def >(std::move($1), std::move($3)); }
+    | Lval { $$ = std::move($1); }
+    ;
+
+InitVal:
+    Exp { $$ = std::make_unique< Compiler::AST::InitVal >(std::move($1)); }
+    | LBRACE InitValList RBRACE { $$ = std::make_unique< Compiler::AST::InitVal >(std::move($2)); }
+    ;
+
+InitValList:
+    InitVal { $$ = std::vector< Compiler::AST::NodePtr >(); $$.push_back(std::move($1)); }
+    | InitValList COMMA InitVal { $1.push_back(std::move($3)); $$ = std::move($1); }
+    ;
+
+DefList:
+    Def { $$ = std::vector< Compiler::AST::NodePtr >(); $$.push_back(std::move($1)); }
+    | DefList COMMA Def { $1.push_back(std::move($3)); $$ = std::move($1); }
+    ;
+
+FuncDef:
+    Type Ident LPAREN RPAREN Block {
+        $$ = std::make_unique< Compiler::AST::FuncDef >(std::move($1), std::move($2), std::move($5));
     }
-}
-         | CONST TYPE_FLOAT ConstDefList SEMICOLON { 
-    $$ = std::vector< std::unique_ptr< BlockItem > >();
-    for(auto &def : $3){
-        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
-        ident->begin = def->begin;
-        ident->end = def->end;
-        auto decl = std::make_unique< Decl >(Type::FLOAT, std::move(ident));
-        $$.push_back(std::move(decl));
-        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
-            $$.push_back(std::move(def));
-        }
-    }
-}
-         ;
+    ;
 
-ConstDefList: ConstDef { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); std::cout<<"detect a const deflist"<<std::endl;}
-            | ConstDefList COMMA ConstDef { $$ = std::move($1); $$.push_back(std::move($3)); }
-            ;
+Ident :
+    IDENT { $$ = std::make_unique< Compiler::AST::Ident >($1); }
+    ;
 
-ConstDef: Ident ASSIGN ConstInitVal { $$ = std::make_unique< Def >(std::move($1), std::move($3)); }
-        ;
+Block:
+    LBRACE RBRACE { $$ = std::make_unique< Compiler::AST::Block >(); }
+    | LBRACE BlockItemList RBRACE { $$ = std::make_unique< Compiler::AST::Block >(std::move($2)); }
+    ;
 
-ConstInitVal: ConstExp { $$ = std::move($1); }
-            ;
+BlockItemList:
+    BlockItem { $$ = std::vector< Compiler::AST::NodePtr >(); $$.push_back(std::move($1)); }
+    | BlockItemList BlockItem { $1.push_back(std::move($2)); $$ = std::move($1); }
+    ;
 
-ConstExp: Exp { $$ = std::move($1); }
-        ;
+BlockItem:
+    Decl { $$ = std::move($1); }
+    | Stmt { $$ = std::move($1); }
+    ;
 
-VarDecl: TYPE_INT VarDefList SEMICOLON {
-    $$ = std::vector< std::unique_ptr< BlockItem > >();
-    for(auto &def : $2){
-        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
-        ident->begin = def->begin;
-        ident->end = def->end;
-        auto decl = std::make_unique< Decl >(Type::INT, std::move(ident));
-        $$.push_back(std::move(decl));
-        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
-            $$.push_back(std::move(def));
-        }
-    }
-}
-        | TYPE_FLOAT VarDefList SEMICOLON {
-    $$ = std::vector< std::unique_ptr< BlockItem > >();
-    for(auto &def : $2){
-        auto ident = std::make_unique< Ident >(dynamic_cast< Def* >(def.get())->ident->name);
-        ident->begin = def->begin;
-        ident->end = def->end;
-        auto decl = std::make_unique< Decl >(Type::FLOAT, std::move(ident));
-        $$.push_back(std::move(decl));
-        if (dynamic_cast< Def* >(def.get())->expr->getType() != Type::NONE){
-            $$.push_back(std::move(def));
-        }
-    }
-}
-        ;
+Stmt:
+    Lval ASSIGN Exp SEMICOLON { $$ = std::make_unique< Compiler::AST::AssignStmt >(std::move($1), std::move($3)); }
+    | Exp SEMICOLON { $$ = std::make_unique< Compiler::AST::ExpStmt >(std::move($1)); }
+    | IF LPAREN Cond RPAREN Stmt ELSE Stmt { $$ = std::make_unique< Compiler::AST::IfStmt >(std::move($3), std::move($5), std::move($7)); }
+    | IF LPAREN Cond RPAREN Stmt { $$ = std::make_unique< Compiler::AST::IfStmt >(std::move($3), std::move($5)); }
+    | WHILE LPAREN Cond RPAREN Stmt { $$ = std::make_unique< Compiler::AST::WhileStmt >(std::move($3), std::move($5)); }
+    | RETURN Exp SEMICOLON { $$ = std::make_unique< Compiler::AST::ReturnStmt >(std::move($2)); }
+    | BREAK SEMICOLON { $$ = std::make_unique< Compiler::AST::BreakStmt >(); }
+    | CONTINUE SEMICOLON { $$ = std::make_unique< Compiler::AST::ContinueStmt >(); }
+    | Block { $$ = std::move($1); }
+    ;
 
-VarDefList: VarDef { $$ = std::vector< std::unique_ptr< BlockItem > >(); $$.push_back(std::move($1)); }
-            | VarDefList COMMA VarDef { $$ = std::move($1); $$.push_back(std::move($3)); }
-            ;
+Exp:
+    AddExp { $$ = std::move($1); }
+    ;
 
+Cond:
+    LOrExp { $$ = std::move($1); }
+    ;
 
-VarDef: Ident { auto nullExpr = std::make_unique< NullExpr > (); $$ = std::make_unique< Def >(std::move($1), std::move(nullExpr)); }
-        | Ident ASSIGN InitVal { $$ = std::make_unique< Def >(std::move($1), std::move($3)); std::cout<<"detect a vardef"<<std::endl;}
-        ;
+Lval: 
+    Ident { $$ = std::make_unique< Compiler::AST::Lval >(std::move($1)); }
+    | Ident DimList { $$ = std::make_unique< Compiler::AST::Lval >(std::move($1), std::move($2)); }
+    ;
 
-InitVal: Exp { $$ = std::move($1); }
-         ;
+DimList:
+      LBRACKET RBRACKET { $$ = std::vector< Compiler::AST::NodePtr >(); $$.push_back(std::make_unique< Compiler::AST::Int32 >(0)); }
+    | LBRACKET Exp RBRACKET { $$ = std::vector< Compiler::AST::NodePtr >(); $$.push_back(std::move($2)); }
+    | DimList LBRACKET RBRACKET { $1.push_back(std::make_unique< Compiler::AST::Int32 >(0)); $$ = std::move($1); }
+    | DimList LBRACKET Exp RBRACKET { $1.push_back(std::move($3)); $$ = std::move($1); }
+    ;
 
+PrimaryExp:
+    Lval { $$ = std::move($1); }
+    | LPAREN Exp RPAREN { $$ = std::move($2); }
+    | Number { $$ = std::move($1); }
+    ;
 
+Number:
+    INT_CONST { $$ = std::make_unique< Compiler::AST::Int32 >($1); }
+    ;
 
+UNARYOP:
+    MINUS { $$ = Compiler::AST::Operator::MINUS; }
+    | NOT { $$ = Compiler::AST::Operator::NOT; }
+    | PLUS { $$ = Compiler::AST::Operator::PLUS; }
+    ;
 
+UnaryExp:
+    PrimaryExp { $$ = std::move($1); }
+    | UNARYOP UnaryExp { $$ = std::make_unique< Compiler::AST::UnaryExp >($1, std::move($2)); }
+    ;
 
+MulExp:
+    UnaryExp { $$ = std::move($1); }
+    | MulExp STAR UnaryExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MUL, std::move($3)); }
+    | MulExp SLASH UnaryExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::DIV, std::move($3)); }
+    | MulExp PERCENT UnaryExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MOD, std::move($3)); }
+    ;
+
+AddExp:
+    MulExp { $$ = std::move($1); }
+    | AddExp PLUS MulExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::PLUS, std::move($3)); }
+    | AddExp MINUS MulExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MINUS, std::move($3)); }
+    ;
+
+RelExp:
+    AddExp { $$ = std::move($1); }
+    | RelExp LT AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::LT, std::move($3)); }
+    | RelExp GT AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::GT, std::move($3)); }
+    | RelExp LE AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::LE, std::move($3)); }
+    | RelExp GE AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::GE, std::move($3)); }
+    ;
+
+EqExp:
+    RelExp { $$ = std::move($1); }
+    | EqExp EQ RelExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::EQ, std::move($3)); }
+    | EqExp NE RelExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::NE, std::move($3)); }
+    ;
+
+LAndExp:
+    EqExp { $$ = std::move($1); }
+    | LAndExp AND EqExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::AND, std::move($3)); }
+    ;
+
+LOrExp:
+    LAndExp { $$ = std::move($1); }
+    | LOrExp OR LAndExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::OR, std::move($3)); }
+    ;
 
 %%
 

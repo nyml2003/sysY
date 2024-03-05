@@ -1,67 +1,39 @@
-detect a vardef
 ```mermaid
 graph TD
-16[program]
-16-->17
-17[block]
-17--item0-->15
-15[FuncDef]
-15--type-->32[int]
-15--name-->1
-1[Ident: f]
-15-->14
-14[block]
-14--item0-->6
-6[Declaration]
-6--type-->23[int]
-6--name-->5
-5[Ident: c]
-14--item1-->13
-13[Declaration]
-13--type-->30[int]
-13--name-->12
-12[Ident: b]
-14--item2-->11
-11[Definition]
-11--name-->7
-7[Ident: b]
-11-->10
-10[BinaryExpression]
-10--lhs-->8
-10--rhs-->9
-8[2]
-9[Ident: c]
-```
-```mermaid
-graph TD
-16[program]
-16-->17
-17[block]
-17--item0-->15
-15[FuncDef]
-15--type-->32[int]
-15--name-->1
-1[Ident: f]
-15-->14
-14[block]
-14--item0-->6
-6[Declaration]
-6--type-->23[int]
-6--name-->5
-5[Ident: c]
-14--item1-->13
-13[Declaration]
-13--type-->30[int]
-13--name-->12
-12[Ident: b]
-14--item2-->11
-11[Definition]
-11--name-->7
-7[Ident: b]
-11-->10
-10[BinaryExpression]
-10--lhs-->8
-10--rhs-->9
-8[2]
-9[Ident: c]
+20[CompUnit]--0--->19
+19[FuncDef]
+19--retType-->0
+0[Type:int]
+19--ident-->1
+1[f]
+19--block-->18
+18[Block]
+18--0-->5
+5[Decl:]
+5--type-->6
+6[Type:int]
+5--defList-->4
+4[Lval]
+4--ident-->3
+3[c]
+18--1-->16
+16[Decl:]
+16--type-->17
+17[Type:int]
+16--defList-->15
+15[Def]
+15--lval-->9
+9[Lval]
+9--ident-->8
+8[b]
+15--initVal-->14
+14[InitVal]
+14--0-->13
+13["*"]
+13--left-->10
+10[2]
+13--right-->12
+12[Lval]
+12--ident-->11
+11[c]
 ```

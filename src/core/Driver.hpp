@@ -5,7 +5,7 @@
 #ifndef SYSY_COMPILER_CORE_DRIVER_HPP
 #define SYSY_COMPILER_CORE_DRIVER_HPP
 #include "Parser.hpp"
-#include "Program.hpp"
+#include "AST.hpp"
 #define YY_DECL \
     yy::parser::symbol_type yylex(Driver &driver)
 
@@ -24,9 +24,8 @@ namespace Compiler::Core {
         static void error(const yy::location &l, const std::string &m);
         void scan_begin(); // 初始化词法分析器, 实现在scanner.l中，主要将sourceFileName和yyin绑定
         void scan_end(); // 释放源代码所在的文件流, 实现在scanner.l中
-        
         yy::location location;
-        ProgramPtr program;
+        Compiler::AST::NodePtr result;
         bool traceScanning;
         bool traceParsing;
         std::string sourceFileName; // 源代码文件名

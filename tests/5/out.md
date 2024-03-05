@@ -1,57 +1,31 @@
-detect a vardef
 ```mermaid
 graph TD
-11[program]
-11-->12
-12[block]
-12--item0-->10
-10[FuncDef]
-10--type-->22[int]
-10--name-->1
-1[Ident: f]
-10-->9
-9[block]
-9--item0-->8
-8[Declaration]
-8--type-->20[int]
-8--name-->7
-7[Ident: b]
-9--item1-->6
-6[Definition]
-6--name-->2
-2[Ident: b]
-6-->5
-5[BinaryExpression]
-5--lhs-->3
-5--rhs-->4
-3[2]
-4[Ident: c]
-```
-```mermaid
-graph TD
-11[program]
-11-->12
-12[block]
-12--item0-->10
-10[FuncDef]
-10--type-->22[int]
-10--name-->1
-1[Ident: f]
-10-->9
-9[block]
-9--item0-->8
-8[Declaration]
-8--type-->20[int]
-8--name-->7
-7[Ident: b]
-9--item1-->6
-6[Definition]
-6--name-->2
-2[Ident: b]
-6-->5
-5[BinaryExpression]
-5--lhs-->3
-5--rhs-->4
-3[2]
-4[Ident: c]
+15[CompUnit]--0--->14
+14[FuncDef]
+14--retType-->0
+0[Type:int]
+14--ident-->1
+1[f]
+14--block-->13
+13[Block]
+13--0-->11
+11[Decl:]
+11--type-->12
+12[Type:int]
+11--defList-->10
+10[Def]
+10--lval-->4
+4[Lval]
+4--ident-->3
+3[b]
+10--initVal-->9
+9[InitVal]
+9--0-->8
+8["*"]
+8--left-->5
+5[2]
+8--right-->7
+7[Lval]
+7--ident-->6
+6[c]
 ```

@@ -23,6 +23,8 @@
 ")" {return yy::parser::make_RPAREN(loc);}
 "{" {return yy::parser::make_LBRACE(loc);}
 "}" {return yy::parser::make_RBRACE(loc);}
+"[" {return yy::parser::make_LBRACKET(loc);}
+"]" {return yy::parser::make_RBRACKET(loc);}
 "+" {return yy::parser::make_PLUS(loc);}
 "-" {return yy::parser::make_MINUS(loc);}
 "*" {return yy::parser::make_STAR(loc);}
@@ -46,7 +48,11 @@
 "void" {return yy::parser::make_TYPE_VOID(loc);}
 "float" {return yy::parser::make_TYPE_FLOAT(loc);}
 "const" {return yy::parser::make_CONST(loc);}
-
+"if" {return yy::parser::make_IF(loc);}
+"else" {return yy::parser::make_ELSE(loc);}
+"while" {return yy::parser::make_WHILE(loc);}
+"break" {return yy::parser::make_BREAK(loc);}
+"continue" {return yy::parser::make_CONTINUE(loc);}
 "return" {return yy::parser::make_RETURN(loc);}
 [ \t\r]+ {loc.step();}
 

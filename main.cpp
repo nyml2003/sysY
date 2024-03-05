@@ -11,8 +11,9 @@ int main(int argc, char* argv[]) {
     driver.setTraceScanning(false);
     driver.parse();
     freopen(error.c_str(), "w", stderr);
-    driver.program->toMermaid();
-    driver.program->optimize();
-    driver.program->toMermaid();
+    std::cout << "```mermaid" << std::endl;
+    std::cout << "graph TD" << std::endl;
+    driver.result->toMermaid();
+    std::cout << "```" << std::endl;
     return 0;
 }
