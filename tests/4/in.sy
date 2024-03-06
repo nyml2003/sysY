@@ -1,4 +1,0 @@
-int f(){
-int c;
-int b=2*c;
-}

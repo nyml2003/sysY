@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include "driver.hpp"
+#include "Scope.hpp"
 namespace Compiler::AST
 {
     int32_t eval(Operator op, int32_t left, int32_t right){
@@ -145,14 +146,24 @@ namespace Compiler::AST
 
     void CompUnit::analyze()
     {
-        if (auto last = dynamic_cast<FuncDef *>(children[children.size() - 1].get()); last == nullptr)
+        auto last = dynamic_cast<FuncDef *>(children[children.size() - 1].get());
+        if (last == nullptr)
         {
             printLocation("The last declaration must be a function definition");
             exit(1);
-        }else{
-            if (auto name = dynamic_cast<Ident *>(last->ident.get())->name; name != "main")
+        }
+        else
+        {
+            auto name = dynamic_cast<Ident *>(last->ident.get())->name;
+            if (name != "main")
             {
                 printLocation("The last function must be main");
+                exit(1);
+            }
+            auto type = dynamic_cast<Type *>(last->retType.get());
+            if (type->type != InnerType::INT)
+            {
+                printLocation("The return type of main must be int32");
                 exit(1);
             }
         }
@@ -181,7 +192,63 @@ namespace Compiler::AST
 
     void Decl::analyze()
     {
-        // TODO
+        bool isConst = false;
+        for (auto &decorator : decorators)
+        {
+            if (decorator == Decorator::CONSTANT)
+            {
+                isConst = true;
+                break;
+            }
+        }
+        if (isConst){
+            for (auto &def : defList)
+            {
+                if (!dynamic_cast<Def *>(def.get()))
+                {
+                    printLocation("Constant must be initialized");
+                    exit(1);
+                }
+            }
+        }
+        for (auto &def : defList)
+        {
+            if (dynamic_cast<Def *>(def.get()))
+            {
+                auto lval = dynamic_cast<Lval *>(dynamic_cast<Def *>(def.get())->lval.get());
+                auto type = dynamic_cast<Type *>(this->type.get());
+                auto name = dynamic_cast<Ident *>(lval->ident.get())->name;
+                auto message = context.find(name);
+                if (message.success)
+                {
+                    printLocation(message.content);
+                    exit(1);
+                }
+                auto initVal = dynamic_cast<InitVal *>(dynamic_cast<Def *>(def.get())->initVal.get());
+                switch (type->type)
+                {
+                case InnerType::INT:
+                    auto first = dynamic_cast<Int32 *>(initVal->children[0].get());
+                    if (first) {
+                        context.insert(name, InnerType::INT, first->val);
+                    }else{
+                        
+                    }
+                    break;
+                case InnerType::FLOAT:
+                    auto first = dynamic_cast<Float32 *>(initVal->children[0].get());
+                    context.insert(name, InnerType::FLOAT, first->val);
+                    break;
+                default:
+                    break;
+                }
+            }
+            if (dynamic_cast<InitVal *>(def.get()))
+            {
+                auto initVal = dynamic_cast<InitVal *>(def.get());
+                initVal->analyze();
+            }
+        }
     }
 
     void Decl::addDecorator(Decorator decorator)
@@ -324,7 +391,12 @@ namespace Compiler::AST
 
     void Block::analyze()
     {
-        // TODO
+        context.enterScope();
+        for (auto &child : children)
+        {
+            child->analyze();
+        }
+        context.exitScope();
     }
 
     void Block::toMermaid()

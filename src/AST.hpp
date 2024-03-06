@@ -1,5 +1,5 @@
-#ifndef SED_AST_HPP
-#define SED_AST_HPP
+#ifndef SED_COMPILER_AST_HPP
+#define SED_COMPILER_AST_HPP
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -256,4 +256,4 @@ namespace Compiler::AST
     };
 }
 
-#endif // SED_AST_HPP
+#endif // SED_COMPILER_AST_HPP

@@ -1,0 +1,6 @@
+int a,b,c;
+const int aaa=123;
+const int d,e,f;
+int main(){
+    return 0;
+}

@@ -1,9 +1,9 @@
 #include "Driver.hpp"
 int main(int argc, char* argv[]) {
     std::string type = (argc == 5) ? argv[1] : "llvm";
-    std::string input = (argc == 5) ? argv[2] : "/app/tests/3/in.sy";
-    std::string output = (argc == 5) ? argv[3] : "/app/tests/3/out.md";
-    std::string error = (argc == 5) ? argv[4] : "/app/tests/3/error.txt";
+    std::string input = (argc == 5) ? argv[2] : "/app/tests/Decl-1/in.sy";
+    std::string output = (argc == 5) ? argv[3] : "/app/tests/Decl-1/out.md";
+    std::string error = (argc == 5) ? argv[4] : "/app/tests/Decl-1/error.txt";
     driver.setSourceFileName(input);
     driver.setOutputFileName(output);
     driver.setErrorFileName(error);

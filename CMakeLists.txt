@@ -14,13 +14,12 @@ add_definitions(${LLVM_DEFINITIONS})
 # flex and bison config
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
-BISON_TARGET(parser src/core/parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser.hpp)
-FLEX_TARGET(scanner src/core/scanner.l ${CMAKE_CURRENT_BINARY_DIR}/scanner.cpp)
+BISON_TARGET(parser src/parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser.hpp)
+FLEX_TARGET(scanner src/scanner.l ${CMAKE_CURRENT_BINARY_DIR}/scanner.cpp)
 ADD_FLEX_BISON_DEPENDENCY(scanner parser)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/core)
 set(CMAKE_CXX_FLAGS "-std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -Wno-unused-value -Wno-unused-label -Wno-unused-local-typedefs -Wno-unused-private-field")
 
 add_executable(sed main.cpp
@@ -29,8 +28,12 @@ add_executable(sed main.cpp
         src/AST.hpp
         ${BISON_parser_OUTPUTS}
         ${FLEX_scanner_OUTPUTS}
-        src/core/Driver.cpp
-        src/core/Driver.hpp
+        src/Driver.cpp
+        src/Driver.hpp
+        src/Scope.cpp
+        src/Scope.hpp
+        src/Value.cpp
+        src/Value.hpp
 
 )
 
