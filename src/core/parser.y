@@ -162,45 +162,272 @@ UNARYOP:
 
 UnaryExp:
     PrimaryExp { $$ = std::move($1); }
-    | UNARYOP UnaryExp { $$ = std::make_unique< Compiler::AST::UnaryExp >($1, std::move($2)); }
+    | UNARYOP UnaryExp {
+        switch ($1) {
+            case Compiler::AST::Operator::MINUS:{
+                auto isInt = dynamic_cast< Compiler::AST::Int32* >($2.get());
+                auto isFloat = dynamic_cast< Compiler::AST::Float32* >($2.get());
+                if ( isInt ) {
+                    $$ = std::make_unique< Compiler::AST::Int32 >(-isInt->val);
+                } else if ( isFloat ) {
+                    $$ = std::make_unique< Compiler::AST::Float32 >(-isFloat->val);
+                } else {
+                    $$ = std::make_unique< Compiler::AST::UnaryExp >(Compiler::AST::Operator::MINUS, std::move($2));
+                }
+                break;
+            }
+                
+            case Compiler::AST::Operator::NOT:{
+                $$ = std::make_unique< Compiler::AST::UnaryExp >(Compiler::AST::Operator::NOT, std::move($2));
+                break;
+            }
+                
+            case Compiler::AST::Operator::PLUS:{
+                $$ = std::move($2);
+                break;
+            }
+                
+            default:
+                std::cerr << "Unknown unary operator" << std::endl;
+                break;
+        }
+    }
     ;
 
 MulExp:
     UnaryExp { $$ = std::move($1); }
-    | MulExp STAR UnaryExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MUL, std::move($3)); }
-    | MulExp SLASH UnaryExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::DIV, std::move($3)); }
-    | MulExp PERCENT UnaryExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MOD, std::move($3)); }
+    | MulExp STAR UnaryExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val * isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val * isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftInt->val * isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val * isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MUL, std::move($3));
+        }    
+    }
+    | MulExp SLASH UnaryExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+
+        if ( isRightInt && isRightInt->val == 0 ) {
+            driver.error(driver.location, "Division by zero");
+        } else if ( isRightFloat && (isRightFloat->val == 0.0f || isRightFloat->val == -0.0f) ) {
+            driver.error(driver.location, "Division by zero");
+        }
+
+
+        if ( isLeftInt && isRightInt ) {
+            if ( isLeftInt->val % isRightInt->val == 0 ) {
+                $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val / isRightInt->val);
+            } else {
+                $$ = std::make_unique< Compiler::AST::Float32 >(static_cast<float>(isLeftInt->val) / static_cast<float>(isRightInt->val));
+            }
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val / isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftInt->val / isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val / isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::DIV, std::move($3));
+        }
+    }
+    | MulExp PERCENT UnaryExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        if ( isRightInt && isRightInt->val == 0 ) {
+            driver.error(driver.location, "Division by zero");
+        }
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val % isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MOD, std::move($3));
+        }
+    }
     ;
 
 AddExp:
     MulExp { $$ = std::move($1); }
-    | AddExp PLUS MulExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::PLUS, std::move($3)); }
-    | AddExp MINUS MulExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::MINUS, std::move($3)); }
+    | AddExp PLUS MulExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val + isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val + isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftInt->val + isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val + isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::ADD, std::move($3));
+        }
+    }
+    | AddExp MINUS MulExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val - isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val - isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftInt->val - isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Float32 >(isLeftFloat->val - isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::SUB, std::move($3));
+        }
+    }
     ;
 
 RelExp:
     AddExp { $$ = std::move($1); }
-    | RelExp LT AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::LT, std::move($3)); }
-    | RelExp GT AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::GT, std::move($3)); }
-    | RelExp LE AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::LE, std::move($3)); }
-    | RelExp GE AddExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::GE, std::move($3)); }
+    | RelExp LT AddExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val < isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val < isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val < isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val < isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::LT, std::move($3));
+        }
+    }
+    | RelExp GT AddExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val > isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val > isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val > isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val > isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::GT, std::move($3));
+        }
+    }
+    | RelExp LE AddExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val <= isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val <= isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val <= isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val <= isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::LE, std::move($3));
+        }
+    }
+    | RelExp GE AddExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val >= isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val >= isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val >= isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val >= isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::GE, std::move($3));
+        }
+    }
     ;
 
 EqExp:
     RelExp { $$ = std::move($1); }
-    | EqExp EQ RelExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::EQ, std::move($3)); }
-    | EqExp NE RelExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::NE, std::move($3)); }
+    | EqExp EQ RelExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val == isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val == isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val == isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val == isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::EQ, std::move($3));
+        }
+    }
+    | EqExp NE RelExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        auto isLeftFloat = dynamic_cast< Compiler::AST::Float32* >($1.get());
+        auto isRightFloat = dynamic_cast< Compiler::AST::Float32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val != isRightInt->val);
+        } else if ( isLeftFloat && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val != isRightFloat->val);
+        } else if ( isLeftInt && isRightFloat ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val != isRightFloat->val);
+        } else if ( isLeftFloat && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftFloat->val != isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::NE, std::move($3));
+        }
+    }
     ;
 
 LAndExp:
     EqExp { $$ = std::move($1); }
-    | LAndExp AND EqExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::AND, std::move($3)); }
+    | LAndExp AND EqExp {
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val && isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::AND, std::move($3));
+        }
+    }
     ;
 
 LOrExp:
     LAndExp { $$ = std::move($1); }
-    | LOrExp OR LAndExp { $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::OR, std::move($3)); }
-    ;
+    | LOrExp OR LAndExp { 
+        auto isLeftInt = dynamic_cast< Compiler::AST::Int32* >($1.get());
+        auto isRightInt = dynamic_cast< Compiler::AST::Int32* >($3.get());
+        if ( isLeftInt && isRightInt ) {
+            $$ = std::make_unique< Compiler::AST::Int32 >(isLeftInt->val || isRightInt->val);
+        } else {
+            $$ = std::make_unique< Compiler::AST::BinaryExp >(std::move($1), Compiler::AST::Operator::OR, std::move($3));
+        }
+    }
 
 %%
 

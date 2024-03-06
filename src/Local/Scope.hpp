@@ -7,7 +7,7 @@
 #include <vector>
 #include <map>
 #include <string>
-#include "Type.hpp"
+#include "AST.hpp"
 namespace Compiler::Scope
 {
     struct Message
@@ -15,6 +15,29 @@ namespace Compiler::Scope
         Type type;
         bool success;
         std::string message;
+    };
+
+    struct Value
+    {
+        InnerType type;
+    };
+
+    struct FloatValue: Value
+    {
+        explicit FloatValue(float value);
+        float value;
+    };
+
+    struct IntValue: Value
+    {
+        explicit IntValue(int value);
+        int value;
+    };
+
+    struct ArrayValue: Value
+    {
+        explicit ArrayValue(std::vector<Value> value);
+        std::vector<Value> value;
     };
 
     struct Context

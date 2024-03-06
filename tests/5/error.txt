@@ -1,7 +1,7 @@
 |int f(){
-|^^^^^^^^
+|^^^^^^^^^
 |int b=2*c;
-|          
+|           
 |}
 |
 | Error: The last function must be main

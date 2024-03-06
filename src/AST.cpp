@@ -4,6 +4,56 @@
 #include "driver.hpp"
 namespace Compiler::AST
 {
+    int32_t eval(Operator op, int32_t left, int32_t right){
+        switch (op)
+        {
+        case Operator::ADD:
+            return left + right;
+        case Operator::SUB:
+            return left - right;
+        case Operator::MUL:
+            return left * right;
+        case Operator::DIV:
+            return left / right;
+        case Operator::MOD:
+            return left % right;
+        case Operator::AND:
+            return left && right;
+        case Operator::OR:
+            return left || right;
+        case Operator::EQ:
+            return left == right;
+        case Operator::NE:
+            return left != right;
+        case Operator::LT:
+            return left < right;
+        case Operator::GT:
+            return left > right;
+        case Operator::LE:
+            return left <= right;
+        case Operator::GE:
+            return left >= right;
+        default:
+            std::cerr << "eval() is not implemented" << std::endl;
+            return 0;
+        }
+    }
+
+    int32_t eval(Operator op, int32_t value)
+    {
+        switch (op)
+        {
+        case Operator::PLUS:
+            return value;
+        case Operator::MINUS:
+            return -value;
+        case Operator::NOT:
+            return !value;
+        default:
+            std::cerr << "eval() is not implemented" << std::endl;
+            return 0;
+        }
+    }
 
     Node::Node()
     {
@@ -70,6 +120,7 @@ namespace Compiler::AST
         }
         std::cerr << "| Error: " << message << std::endl;
     }
+
 
     void CompUnit::toMermaid()
     {
@@ -436,6 +487,10 @@ namespace Compiler::AST
         // TODO
     }
 
+    void BinaryExp::constantFolding()
+    {
+    }
+
     void BinaryExp::toMermaid()
     {
         std::cout << nodeId << "[" << operatorName[static_cast<int>(op)] << "]" << std::endl;
@@ -486,21 +541,24 @@ namespace Compiler::AST
         std::cout << nodeId << "[" << val << "]" << std::endl;
     }
 
+
     void Int32::analyze()
     {
         // TODO
     }
 
-    float32::float32(float val) : val(val)
+    Float32::Float32(float val) : val(val)
     {
     }
 
-    void float32::analyze()
+    void Float32::analyze()
     {
         // TODO
     }
 
-    void float32::toMermaid()
+
+
+    void Float32::toMermaid()
     {
         std::cout << nodeId << "[" << val << "]" << std::endl;
     }

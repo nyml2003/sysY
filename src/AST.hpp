@@ -11,9 +11,10 @@ namespace Compiler::AST
     {
         INT,
         VOID,
-        FLOAT
+        FLOAT,
+        ARRAY
     };
-    inline std::vector<std::string> innerType = {"int", "void", "bool"};
+    inline std::vector<std::string> innerType = {"int", "void", "float", "array"};
     enum class Operator
     {
         ADD,
@@ -217,10 +218,10 @@ namespace Compiler::AST
         int32_t val;
     };
 
-    struct float32 : public Node
+    struct Float32 : public Node
     {
         void analyze() override;
-        explicit float32(float val);
+        explicit Float32(float val);
         void toMermaid() override;
         float val;
     };
@@ -230,6 +231,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit UnaryExp(Operator op, NodePtr expr);
         void toMermaid() override;
+        void constantFolding();
         Operator op;
         NodePtr expr;
     };
@@ -239,6 +241,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit BinaryExp(NodePtr left, Operator op, NodePtr right);
         void toMermaid() override;
+        void constantFolding();
         NodePtr left;
         Operator op;
         NodePtr right;

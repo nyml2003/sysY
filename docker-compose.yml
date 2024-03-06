@@ -4,7 +4,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "chmod 777 /app/start.sh ; /app/start.sh"
     ports:
       - "8022:22"
     tty: true
