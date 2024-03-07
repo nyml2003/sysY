@@ -34,4 +34,31 @@ int main(){
 }
 ```
 
+# Declaration
+
+词法分析后Declaration的一般结构为
+
+```mermaid
+graph
+    _A[Declaration:const]-->__B[Type]
+    _A --> A
+    A[defList] --0---> B[Lval]
+    A --1---> C[Def]
+    C --2---> D[Lval]
+    C --3---> E[Exp]
+```
+
+修饰符const是可选的
+
+语义分析步骤
+
+1. 若修饰符const存在，则检查defList中的所有元素都是Def, 若出现非Def元素则报错
+
+2. 对每个Lval进行语义分析
+
+3. 若修饰符const存在，
+3.1 若Type为int，检查Exp是Int32类型，此时该Exp应先进行语义分析（这里指如果是常量表达式，应该进行计算）
+3.2 若Type为float，检查Exp是Float类型，此时该Exp应先进行语义分析（这里指如果是常量表达式，应该进行计算）
+
+# 左值
 

@@ -34,6 +34,7 @@ namespace Compiler::Scope
         Message find(std::string name);
         void enterScope();
         void exitScope();
+        
     };
 }
 inline auto context = Compiler::Scope::Context();

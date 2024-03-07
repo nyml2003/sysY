@@ -190,6 +190,11 @@ namespace Compiler::AST
         }
     }
 
+    /**
+     * @brief 
+     * 1. 如果是常量声明，那么必须初始化
+     * 2. 构造符号表
+     */
     void Decl::analyze()
     {
         bool isConst = false;
@@ -446,8 +451,6 @@ namespace Compiler::AST
         std::cout << nodeId << "--expr-->" << expr->nodeId << std::endl;
         expr->toMermaid();
     }
-
-
 
     IfStmt::IfStmt(NodePtr cond, NodePtr thenStmt, NodePtr elseStmt) : cond(std::move(cond)), thenStmt(std::move(thenStmt)), elseStmt(std::move(elseStmt))
     {
