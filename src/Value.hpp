@@ -20,9 +20,6 @@ namespace Compiler
         float value;
     };
 
-    struct ArrayValue : public Value
-    {
-    };
 }
 
 #endif // SED_COMPILER_VALUE_HPP

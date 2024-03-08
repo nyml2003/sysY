@@ -198,6 +198,7 @@ namespace Compiler::AST
     void Decl::analyze()
     {
         bool isConst = false;
+        auto type = dynamic_cast<Type *>(this->type.get());
         for (auto &decorator : decorators)
         {
             if (decorator == Decorator::CONSTANT)
@@ -214,44 +215,67 @@ namespace Compiler::AST
                     printLocation("Constant must be initialized");
                     exit(1);
                 }
-            }
-        }
-        for (auto &def : defList)
-        {
-            if (dynamic_cast<Def *>(def.get()))
-            {
                 auto lval = dynamic_cast<Lval *>(dynamic_cast<Def *>(def.get())->lval.get());
-                auto type = dynamic_cast<Type *>(this->type.get());
                 auto name = dynamic_cast<Ident *>(lval->ident.get())->name;
-                auto message = context.find(name);
-                if (message.success)
+                auto message = context.insert(name, type->type);
+                if (!message.success)
                 {
                     printLocation(message.content);
                     exit(1);
                 }
                 auto initVal = dynamic_cast<InitVal *>(dynamic_cast<Def *>(def.get())->initVal.get());
-                switch (type->type)
-                {
-                case InnerType::INT:
-                    auto first = dynamic_cast<Int32 *>(initVal->children[0].get());
-                    if (first) {
-                        context.insert(name, InnerType::INT, first->val);
-                    }else{
-                        
+                if (initVal->children.size() == 1){
+                    switch (type->type)
+                    {
+                    case InnerType::INT:
+                        initVal->children[0]->analyze();
+                        if (dynamic_cast<Int32 *>(initVal->children[0].get()) == nullptr)
+                        {
+                            printLocation("The type of the initializer is not int32");
+                            exit(1);
+                        }
+                        auto message = context.setValue(name, std::make_shared<IntValue>(dynamic_cast<Int32 *>(initVal->children[0].get())->val));
+                        if (!message.success)
+                        {
+                            printLocation(message.content);
+                            exit(1);
+                        }
+                        break;
+                    case InnerType::FLOAT:
+                        initVal->children[0]->analyze();
+                        if (dynamic_cast<Float32 *>(initVal->children[0].get()) == nullptr)
+                        {
+                            printLocation("The type of the initializer is not float32");
+                            exit(1);
+                        }
+                        auto message = context.setValue(name, std::make_shared<FloatValue>(dynamic_cast<Float32 *>(initVal->children[0].get())->val));
+                        if (!message.success)
+                        {
+                            printLocation(message.content);
+                            exit(1);
+                        }
+                        break;
+                    default:
+                        printLocation("The type of the initializer is not implemented");
+                        exit(1);
                     }
-                    break;
-                case InnerType::FLOAT:
-                    auto first = dynamic_cast<Float32 *>(initVal->children[0].get());
-                    context.insert(name, InnerType::FLOAT, first->val);
-                    break;
-                default:
-                    break;
                 }
             }
-            if (dynamic_cast<InitVal *>(def.get()))
+        }
+        else {
+            for (auto &def : defList)
             {
-                auto initVal = dynamic_cast<InitVal *>(def.get());
-                initVal->analyze();
+                if (dynamic_cast<Def *>(def.get()))
+                {
+                    auto lval = dynamic_cast<Lval *>(dynamic_cast<Def *>(def.get())->lval.get());
+                    auto name = dynamic_cast<Ident *>(lval->ident.get())->name;
+                    auto message = context.insert(name, type->type);
+                    if (!message.success)
+                    {
+                        printLocation(message.content);
+                        exit(1);
+                    }
+                }
             }
         }
     }
@@ -562,10 +586,6 @@ namespace Compiler::AST
         // TODO
     }
 
-    void BinaryExp::constantFolding()
-    {
-    }
-
     void BinaryExp::toMermaid()
     {
         std::cout << nodeId << "[" << operatorName[static_cast<int>(op)] << "]" << std::endl;
@@ -583,7 +603,29 @@ namespace Compiler::AST
 
     void UnaryExp::analyze()
     {
-        // TODO
+        //TODO
+    }
+
+    NodePtr UnaryExp::constantFolding()
+    {
+        auto isIdent = dynamic_cast<Ident *>(expr.get());
+        if (isIdent)
+        {
+            auto message = context.confirm(isIdent->name);
+            if (!message.success)
+            {
+                printLocation(message.content);
+                exit(1);
+            }
+            auto message = context.find(isIdent->name);
+            if (!message.success)
+            {
+                return;
+            }
+            switch (message.value->type)
+            {
+
+        }
     }
 
     void UnaryExp::toMermaid()
