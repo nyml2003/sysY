@@ -32,8 +32,6 @@ add_executable(sed main.cpp
         src/Driver.hpp
         src/Scope.cpp
         src/Scope.hpp
-        src/Value.cpp
-        src/Value.hpp
 
 )
 
@@ -57,8 +55,6 @@ target_link_libraries(sed
         LLVM
 )
 
-set(OUTPUT_PRODUCT_NAME "mermaid" CACHE STRING "Output product name")
-
 enable_testing()
 
 file(GLOB TEST_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/*)
@@ -66,16 +62,13 @@ file(GLOB TEST_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/tests ${CMAKE_CURRENT_S
 foreach (TEST_DIR ${TEST_DIRS})
     set(TEST_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/in.sy)
 
-    if (OUTPUT_PRODUCT_NAME STREQUAL "mermaid")
-        set(TEST_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.md)
+    set (TEST_MD ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.md)
 
-    elseif (OUTPUT_PRODUCT_NAME STREQUAL "llvm")
-        set(TEST_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.ll)
-    endif ()
+    set (TEST_IR ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.ll)
 
     set(TEST_ERROR ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/error.txt)
     add_test(
             NAME ${TEST_DIR}
-            COMMAND sed ${OUTPUT_PRODUCT_NAME} ${TEST_INPUT} ${TEST_OUTPUT} ${TEST_ERROR}
+            COMMAND sed ${OUTPUT_PRODUCT_NAME} ${TEST_INPUT} {TEST_MD} ${TEST_ERROR}  ${TEST_IR}
     )
 endforeach ()

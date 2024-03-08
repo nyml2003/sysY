@@ -56,6 +56,162 @@ namespace Compiler::AST
         }
     }
 
+    bool isConst(Node *node);
+    NodePtr constantFolding(Node *node);
+
+    bool isConst(Node* node){
+        auto isIdent = dynamic_cast<Ident *>(node);
+        if (isIdent)
+        {
+            auto message = context.confirm(isIdent->name);
+            if (!message.success)
+            {
+                node->printLocation(message.content);
+                exit(1);
+            }
+            message = context.find(isIdent->name);
+            return message.success;
+        }
+        auto isInt32 = dynamic_cast<Int32 *>(node);
+        if (isInt32)
+        {
+            return true;
+        }
+        auto isFloat32 = dynamic_cast<Float32 *>(node);
+        if (isFloat32)
+        {
+            return true;
+        }
+        auto isBinaryExp = dynamic_cast<BinaryExp *>(node);
+        if (isBinaryExp)
+        {
+            bool isLeftConst = isConst(isBinaryExp->left.get());
+            if (isLeftConst){
+                auto left = constantFolding(isBinaryExp->left.get());
+                if (left){
+                    isBinaryExp->left = std::move(left);
+                }
+            }
+            bool isRightConst = isConst(isBinaryExp->right.get());
+            if (isRightConst){
+                auto right = constantFolding(isBinaryExp->right.get());
+                if (right){
+                    isBinaryExp->right = std::move(right);
+                }
+            }
+            return isLeftConst && isRightConst;
+        }
+        auto isUnaryExp = dynamic_cast<UnaryExp *>(node);
+        if (isUnaryExp)
+        {
+            bool isChildConst = isConst(isUnaryExp->expr.get());
+            if (isChildConst){
+                auto child = constantFolding(isUnaryExp->expr.get());
+                if (child){
+                    isUnaryExp->expr = std::move(child);
+                }
+            }
+            return isChildConst;
+        }
+        auto isLval = dynamic_cast<Lval *>(node);
+        if (isLval)
+        {
+            return isConst(isLval->ident.get());
+        }
+        std::cerr<<"isConst() is not implemented"<<std::endl;
+        exit(1);
+    }
+
+    NodePtr constantFolding(Node* node){
+        auto isIdent = dynamic_cast<Ident *>(node);
+        if (isIdent)
+        {
+            auto message = context.confirm(isIdent->name);
+            if (!message.success)
+            {
+                node->printLocation(message.content);
+                exit(1);
+            }
+            message = context.find(isIdent->name);
+            if (!message.success)
+            {
+                return nullptr;
+            }else {
+                auto value = message.value;
+                if (std::holds_alternative<int32_t>(value)){
+                    return std::make_unique<Int32>(std::get<int32_t>(value));
+                }else if (std::holds_alternative<float>(value)){
+                    return std::make_unique<Float32>(std::get<float>(value));
+                }else{
+                    std::cerr<<"constantFolding() is not implemented"<<std::endl;
+                    exit(1);
+                }
+            }
+        }
+        auto isInt32 = dynamic_cast<Int32 *>(node);
+        if (isInt32)
+        {
+            return nullptr;
+        }
+        auto isFloat32 = dynamic_cast<Float32 *>(node);
+        if (isFloat32)
+        {
+            return nullptr;
+        }
+        auto isBinaryExp = dynamic_cast<BinaryExp *>(node);
+        if (isBinaryExp)
+        {
+            bool isExprConst = isConst(node);
+            if (isExprConst){
+                if (constantFolding(isBinaryExp->left.get())){
+                    isBinaryExp->left = std::move(constantFolding(isBinaryExp->left.get()));
+                }
+                if (constantFolding(isBinaryExp->right.get())){
+                    isBinaryExp->right = std::move(constantFolding(isBinaryExp->right.get()));
+                }
+                auto isLeftInt32 = dynamic_cast<Int32 *>(isBinaryExp->left.get());
+                auto isRightInt32 = dynamic_cast<Int32 *>(isBinaryExp->right.get());
+                if (isLeftInt32 && isRightInt32){
+                    return std::make_unique<Int32>(eval(isBinaryExp->op, isLeftInt32->val, isRightInt32->val));
+                }
+                auto isLeftFloat32 = dynamic_cast<Float32 *>(isBinaryExp->left.get());
+                auto isRightFloat32 = dynamic_cast<Float32 *>(isBinaryExp->right.get());
+                if (isLeftFloat32 && isRightFloat32){
+                    return std::make_unique<Float32>(eval(isBinaryExp->op, isLeftFloat32->val, isRightFloat32->val));
+                }
+                return std::make_unique<Float32>(eval(isBinaryExp->op, (float)isLeftInt32->val, (float)isRightFloat32->val));
+            }else{
+                return nullptr;
+            }
+        }
+        auto isUnaryExp = dynamic_cast<UnaryExp *>(node);
+        if (isUnaryExp)
+        {
+            bool isExprConst = isConst(node);
+            if (isExprConst){
+                auto child = constantFolding(isUnaryExp->expr.get());
+                auto isChildInt32 = dynamic_cast<Int32 *>(child.get());
+                if (isChildInt32){
+                    return std::make_unique<Int32>(eval(isUnaryExp->op, isChildInt32->val));
+                }
+                auto isChildFloat32 = dynamic_cast<Float32 *>(child.get());
+                if (isChildFloat32){
+                    return std::make_unique<Float32>(eval(isUnaryExp->op, isChildFloat32->val));
+                }
+                return nullptr;
+            }else{
+                return nullptr;
+            }
+        }
+        auto isLval = dynamic_cast<Lval *>(node);
+        if (isLval)
+        {
+            return constantFolding(isLval->ident.get());
+        }
+        std::cerr<<"constantFolding() is not implemented"<<std::endl;
+        exit(1);
+    }
+
     Node::Node()
     {
         nodeId = maxASTNodeId++;
@@ -149,7 +305,7 @@ namespace Compiler::AST
         auto last = dynamic_cast<FuncDef *>(children[children.size() - 1].get());
         if (last == nullptr)
         {
-            printLocation("The last declaration must be a function definition");
+            this->printLocation("The last declaration must be a function definition");
             exit(1);
         }
         else
@@ -157,20 +313,27 @@ namespace Compiler::AST
             auto name = dynamic_cast<Ident *>(last->ident.get())->name;
             if (name != "main")
             {
-                printLocation("The last function must be main");
+                this->printLocation("The last function must be main");
                 exit(1);
             }
             auto type = dynamic_cast<Type *>(last->retType.get());
             if (type->type != InnerType::INT)
             {
-                printLocation("The return type of main must be int32");
+                this->printLocation("The return type of main must be int32");
                 exit(1);
             }
         }
+        context.enterScope();
         for (auto &child : children)
         {
             child->analyze();
         }
+        context.exitScope();
+    }
+
+    CompUnit::CompUnit()
+    {
+        nodeType = NODE_TYPE::COMP_UNIT;
     }
 
     void Decl::toMermaid()
@@ -189,30 +352,25 @@ namespace Compiler::AST
             defList[i]->toMermaid();
         }
     }
-
-    /**
-     * @brief 
-     * 1. 如果是常量声明，那么必须初始化
-     * 2. 构造符号表
-     */
     void Decl::analyze()
     {
-        bool isConst = false;
+        bool hasConst = false;
         auto type = dynamic_cast<Type *>(this->type.get());
         for (auto &decorator : decorators)
         {
             if (decorator == Decorator::CONSTANT)
             {
-                isConst = true;
+                hasConst = true;
                 break;
             }
         }
-        if (isConst){
+        if (hasConst)
+        {
             for (auto &def : defList)
             {
                 if (!dynamic_cast<Def *>(def.get()))
                 {
-                    printLocation("Constant must be initialized");
+                    this->printLocation("Constant must be initialized");
                     exit(1);
                 }
                 auto lval = dynamic_cast<Lval *>(dynamic_cast<Def *>(def.get())->lval.get());
@@ -220,43 +378,55 @@ namespace Compiler::AST
                 auto message = context.insert(name, type->type);
                 if (!message.success)
                 {
-                    printLocation(message.content);
+                    this->printLocation(message.content);
                     exit(1);
                 }
                 auto initVal = dynamic_cast<InitVal *>(dynamic_cast<Def *>(def.get())->initVal.get());
                 if (initVal->children.size() == 1){
                     switch (type->type)
                     {
-                    case InnerType::INT:
-                        initVal->children[0]->analyze();
+                    case InnerType::INT:{
+                        if (isConst(initVal->children[0].get()) && constantFolding(initVal->children[0].get()))
+                        {
+                            initVal->children[0] = std::move(constantFolding(initVal->children[0].get()));
+                        }
                         if (dynamic_cast<Int32 *>(initVal->children[0].get()) == nullptr)
                         {
-                            printLocation("The type of the initializer is not int32");
+                            this->printLocation("The type of the initializer is not int32");
                             exit(1);
                         }
-                        auto message = context.setValue(name, std::make_shared<IntValue>(dynamic_cast<Int32 *>(initVal->children[0].get())->val));
+                        auto message = context.setValue(name, dynamic_cast<Int32 *>(initVal->children[0].get())->val);
                         if (!message.success)
                         {
-                            printLocation(message.content);
+                            this->printLocation(message.content);
                             exit(1);
                         }
                         break;
-                    case InnerType::FLOAT:
-                        initVal->children[0]->analyze();
+                    }
+                        
+                    case InnerType::FLOAT:{
+                        if (isConst(initVal->children[0].get()) && constantFolding(initVal->children[0].get()))
+                        {
+                            initVal->children[0] = std::move(constantFolding(initVal->children[0].get()));
+                        }
                         if (dynamic_cast<Float32 *>(initVal->children[0].get()) == nullptr)
                         {
-                            printLocation("The type of the initializer is not float32");
+                            this->printLocation("The type of the initializer is not float32");
                             exit(1);
                         }
-                        auto message = context.setValue(name, std::make_shared<FloatValue>(dynamic_cast<Float32 *>(initVal->children[0].get())->val));
+                        auto message = context.setValue(name, dynamic_cast<Float32 *>(initVal->children[0].get())->val);
                         if (!message.success)
                         {
-                            printLocation(message.content);
+                            this->printLocation(message.content);
                             exit(1);
                         }
                         break;
+                    }
+                        
+                    case InnerType::ARRAY:
+                    case InnerType::VOID:
                     default:
-                        printLocation("The type of the initializer is not implemented");
+                        this->printLocation("The type of the initializer is not implemented");
                         exit(1);
                     }
                 }
@@ -272,7 +442,20 @@ namespace Compiler::AST
                     auto message = context.insert(name, type->type);
                     if (!message.success)
                     {
-                        printLocation(message.content);
+                        this->printLocation(message.content);
+                        exit(1);
+                    }
+                    auto initVal = dynamic_cast<InitVal *>(dynamic_cast<Def *>(def.get())->initVal.get());
+                    initVal->analyze();
+                }
+                else if (dynamic_cast<Lval *>(def.get()))
+                {
+                    auto lval = dynamic_cast<Lval *>(def.get());
+                    auto name = dynamic_cast<Ident *>(lval->ident.get())->name;
+                    auto message = context.insert(name, type->type);
+                    if (!message.success)
+                    {
+                        this->printLocation(message.content);
                         exit(1);
                     }
                 }
@@ -291,6 +474,7 @@ namespace Compiler::AST
         this->type = std::make_unique<Type>(dynamic_cast<Type *>(type.get())->type);
         this->begin = type->begin;
         this->end = this->defList[this->defList.size() - 1]->end;
+        this->nodeType = NODE_TYPE::DECL;
     }
 
     void Type::toMermaid()
@@ -300,6 +484,7 @@ namespace Compiler::AST
 
     Type::Type(InnerType type) : type(type)
     {
+        this->nodeType = NODE_TYPE::TYPE;
     }
 
     void Type::analyze()
@@ -311,11 +496,12 @@ namespace Compiler::AST
     {
         begin = this->lval->begin;
         end = this->initVal->end;
+        this->nodeType = NODE_TYPE::DEF;
     }
 
     void Def::analyze()
     {
-        // TODO
+        
     }
 
     void Def::toMermaid()
@@ -341,19 +527,21 @@ namespace Compiler::AST
 
     void Lval::analyze()
     {
-        // TODO
+        
     }
 
     Lval::Lval(NodePtr ident, std::vector<NodePtr> dim) : ident(std::move(ident)), dim(std::move(dim))
     {
         begin = this->ident->begin;
         end = this->dim[this->dim.size() - 1]->end;
+        this->nodeType = NODE_TYPE::LVAL;
     }
 
     Lval::Lval(NodePtr ident) : ident(std::move(ident))
     {
         begin = this->ident->begin;
         end = this->ident->end;
+        this->nodeType = NODE_TYPE::LVAL;
     }
 
     void InitVal::toMermaid()
@@ -368,13 +556,27 @@ namespace Compiler::AST
 
     void InitVal::analyze()
     {
-        // TODO
+        for (auto &child : children)
+        {
+            if (dynamic_cast<InitVal *>(child.get()))
+            {
+                child->analyze();
+            }
+            else
+            {
+                if (isConst(child.get()) && constantFolding(child.get()))
+                {
+                    child = std::move(constantFolding(child.get()));
+                }
+            }
+        }
     }
 
     InitVal::InitVal(std::vector<NodePtr> children) : children(std::move(children))
     {
         begin = this->children[0]->begin;
         end = this->children[this->children.size() - 1]->end;
+        this->nodeType = NODE_TYPE::INIT_VAL;
     }
 
     InitVal::InitVal(NodePtr child)
@@ -382,6 +584,7 @@ namespace Compiler::AST
         children.push_back(std::move(child));
         begin = this->children[0]->begin;
         end = this->children[0]->end;
+        this->nodeType = NODE_TYPE::INIT_VAL;
     }
 
     FuncDef::FuncDef(NodePtr retType, NodePtr ident, NodePtr block) : retType(std::move(retType)), ident(std::move(ident)), block(std::move(block))
@@ -390,11 +593,12 @@ namespace Compiler::AST
         end = this->block->end;
         end.line += 1;
         end.column = 1;
+        this->nodeType = NODE_TYPE::FUNC_DEF;
     }
 
     void FuncDef::analyze()
     {
-        // TODO
+        block->analyze();
     }
 
     void FuncDef::toMermaid()
@@ -408,14 +612,14 @@ namespace Compiler::AST
         block->toMermaid();
     }
 
-    Block::Block()
-    {
-    }
+    Block::Block(){
+        this->nodeType = NODE_TYPE::BLOCK;}
 
     Block::Block(std::vector<NodePtr> children) : children(std::move(children))
     {
         begin = this->children[0]->begin;
         end = this->children[this->children.size() - 1]->end;
+        this->nodeType = NODE_TYPE::BLOCK;
     }
 
     void Block::analyze()
@@ -442,11 +646,15 @@ namespace Compiler::AST
     {
         begin = this->lval->begin;
         end = this->expr->end;
+        this->nodeType = NODE_TYPE::ASSIGN_STMT;
     }
 
     void AssignStmt::analyze()
     {
-        // TODO
+        if (constantFolding(this->expr.get()))
+        {
+            this->expr = std::move(constantFolding(this->expr.get()));
+        }
     }
 
     void AssignStmt::toMermaid()
@@ -462,6 +670,7 @@ namespace Compiler::AST
     {
         begin = this->expr->begin;
         end = this->expr->end;
+        this->nodeType = NODE_TYPE::EXP_STMT;
     }
 
     void ExpStmt::analyze()
@@ -480,6 +689,7 @@ namespace Compiler::AST
     {
         begin = this->cond->begin;
         end = this->elseStmt->end;
+        this->nodeType = NODE_TYPE::IF_STMT;
     }
 
 
@@ -487,6 +697,7 @@ namespace Compiler::AST
     {
         begin = this->cond->begin;
         end = this->thenStmt->end;
+        this->nodeType = NODE_TYPE::IF_STMT;
     }
 
     void IfStmt::analyze()
@@ -512,6 +723,7 @@ namespace Compiler::AST
     {
         begin = this->expr->begin;
         end = this->stmt->end;
+        this->nodeType = NODE_TYPE::WHILE_STMT;
     }
 
     void WhileStmt::analyze()
@@ -530,6 +742,7 @@ namespace Compiler::AST
 
     BreakStmt::BreakStmt()
     {
+        this->nodeType = NODE_TYPE::BREAK_STMT;
     }
 
     void BreakStmt::analyze()
@@ -544,6 +757,7 @@ namespace Compiler::AST
 
     ContinueStmt::ContinueStmt()
     {
+        this->nodeType = NODE_TYPE::CONTINUE_STMT;
     }
 
     void ContinueStmt::analyze()
@@ -561,11 +775,15 @@ namespace Compiler::AST
     {
         begin = this->expr->begin;
         end = this->expr->end;
+        this->nodeType = NODE_TYPE::RETURN_STMT;
     }
 
     void ReturnStmt::analyze()
     {
-        // TODO
+        if (constantFolding(this->expr.get()))
+        {
+            this->expr = std::move(constantFolding(this->expr.get()));
+        }
     }
 
     void ReturnStmt::toMermaid()
@@ -579,6 +797,7 @@ namespace Compiler::AST
     {
         begin = this->left->begin;
         end = this->right->end;
+        this->nodeType = NODE_TYPE::BINARY_EXP;
     }
 
     void BinaryExp::analyze()
@@ -599,35 +818,13 @@ namespace Compiler::AST
     {
         begin = this->expr->begin;
         end = this->expr->end;
+        this->nodeType = NODE_TYPE::UNARY_EXP;
     }
 
     void UnaryExp::analyze()
     {
         //TODO
     }
-
-    NodePtr UnaryExp::constantFolding()
-    {
-        auto isIdent = dynamic_cast<Ident *>(expr.get());
-        if (isIdent)
-        {
-            auto message = context.confirm(isIdent->name);
-            if (!message.success)
-            {
-                printLocation(message.content);
-                exit(1);
-            }
-            auto message = context.find(isIdent->name);
-            if (!message.success)
-            {
-                return;
-            }
-            switch (message.value->type)
-            {
-
-        }
-    }
-
     void UnaryExp::toMermaid()
     {
         std::cout << nodeId << "[" << operatorName[static_cast<int>(op)] << "]" << std::endl;
@@ -637,6 +834,7 @@ namespace Compiler::AST
 
     Ident::Ident(std::string &name) : name(name)
     {
+        this->nodeType = NODE_TYPE::IDENT;
     }
 
     void Ident::toMermaid()
@@ -651,6 +849,7 @@ namespace Compiler::AST
 
     Int32::Int32(int32_t val) : val(val)
     {
+        this->nodeType = NODE_TYPE::INT32;
     }
 
     void Int32::toMermaid()
@@ -666,14 +865,13 @@ namespace Compiler::AST
 
     Float32::Float32(float val) : val(val)
     {
+        this->nodeType = NODE_TYPE::FLOAT32;
     }
 
     void Float32::analyze()
     {
         // TODO
     }
-
-
 
     void Float32::toMermaid()
     {

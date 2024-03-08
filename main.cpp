@@ -1,11 +1,13 @@
 #include "Driver.hpp"
 int main(int argc, char* argv[]) {
-    std::string type = (argc == 5) ? argv[1] : "llvm";
-    std::string input = (argc == 5) ? argv[2] : "/app/tests/Decl-1/in.sy";
-    std::string output = (argc == 5) ? argv[3] : "/app/tests/Decl-1/out.md";
-    std::string error = (argc == 5) ? argv[4] : "/app/tests/Decl-1/error.txt";
+    std::string folderName = "/app/tests/Decl-1/";
+    std::string type = (argc == 6) ? argv[1] : "llvm";
+    std::string input = (argc == 6) ? argv[2] : folderName + "in.sy";
+    std::string md = (argc == 6) ? argv[3] : folderName + "out.md";
+    std::string error = (argc == 6) ? argv[4] : folderName + "out.err";
+    std::string ir = (argc == 6) ? argv[5] : folderName + "out.ll";
     driver.setSourceFileName(input);
-    driver.setOutputFileName(output);
+    driver.setOutputFileName(md);
     driver.setErrorFileName(error);
     driver.setTraceParsing(false);
     driver.setTraceScanning(false);
@@ -16,5 +18,6 @@ int main(int argc, char* argv[]) {
     std::cout << "graph TD" << std::endl;
     driver.result->toMermaid();
     std::cout << "```" << std::endl;
+    driver.setOutputFileName(ir);
     return 0;
 }

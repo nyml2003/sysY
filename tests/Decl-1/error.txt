@@ -1,3 +1,0 @@
-|const int d,e,f;
-|^^^^^^^^^^^^^^^
-| Error: Constant must be initialized

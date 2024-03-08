@@ -56,6 +56,29 @@ namespace Compiler::AST
     {
         CONSTANT,
     };
+    enum class NODE_TYPE
+    {
+        COMP_UNIT,
+        DECL,
+        TYPE,
+        DEF,
+        LVAL,
+        INIT_VAL,
+        FUNC_DEF,
+        BLOCK,
+        ASSIGN_STMT,
+        EXP_STMT,
+        IF_STMT,
+        WHILE_STMT,
+        BREAK_STMT,
+        CONTINUE_STMT,
+        RETURN_STMT,
+        INT32,
+        FLOAT32,
+        UNARY_EXP,
+        BINARY_EXP,
+        IDENT,
+    };
     inline std::vector<std::string> decoratorName = {"const"};
     struct Node
     {
@@ -73,12 +96,14 @@ namespace Compiler::AST
         static size_t maxASTNodeId;
         yy::position begin;
         yy::position end;
+        NODE_TYPE nodeType;
         void printLocation(const std::string& message);
     };
     using NodePtr = std::unique_ptr<Node>;
 
     struct CompUnit : public Node
     {
+        explicit CompUnit();
         void toMermaid() override;
         void analyze() override;
         void attach(std::vector<NodePtr> chilren);
@@ -98,6 +123,7 @@ namespace Compiler::AST
 
     struct Type : public Node
     {
+        explicit Type();
         void analyze() override;
         explicit Type(InnerType type);
         void toMermaid() override;
@@ -231,7 +257,6 @@ namespace Compiler::AST
         void analyze() override;
         explicit UnaryExp(Operator op, NodePtr expr);
         void toMermaid() override;
-        void constantFolding();
         Operator op;
         NodePtr expr;
     };
@@ -241,7 +266,6 @@ namespace Compiler::AST
         void analyze() override;
         explicit BinaryExp(NodePtr left, Operator op, NodePtr right);
         void toMermaid() override;
-        void constantFolding();
         NodePtr left;
         Operator op;
         NodePtr right;

@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 #include "AST.hpp"
-#include "Value.hpp"
+#include <variant>
 namespace Compiler::Scope
 {
 
@@ -12,7 +12,7 @@ namespace Compiler::Scope
     {
         bool success;
         std::string content;
-        Value* value;
+        std::variant<int32_t, float,std::monostate> value;
     };
 
     struct Context
@@ -24,8 +24,8 @@ namespace Compiler::Scope
         Message find(std::string name);
         void enterScope();
         void exitScope();
-        std::vector< std::map<std::string,std::shared_ptr<Compiler::Value> > > constTable;
-        Message setValue(std::string name, std::shared_ptr<Compiler::Value> value);
+        std::vector<std::map<std::string, std::variant<int32_t, float, std::monostate> > > constTable;
+        Message setValue(std::string name, std::variant<int32_t, float, std::monostate> value);
     };
 }
 inline auto context = Compiler::Scope::Context();

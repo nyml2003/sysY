@@ -1,6 +1,8 @@
-int a,b,c;
-const int aaa=123;
-const int d,e,f;
+
+const int a=3;
+int b,c,d,e;
 int main(){
+    const int c=a*a+123+a,d=c,e=c+1;
+    b=c;
     return 0;
 }
