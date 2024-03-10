@@ -376,7 +376,7 @@ namespace Compiler::AST
 
     void Decl::toLLVM()
     {
-        type->toLLVM(); // 将当前类型存入context
+        type->toLLVM();
         bool hasConst = false;
         for (auto &def : decorators){
             if (def == Decorator::CONSTANT){
@@ -486,6 +486,12 @@ namespace Compiler::AST
                         this->printLocation(message.content);
                         exit(1);
                     }
+                    message = context.setValue(name, std::monostate{});
+                    if (!message.success)
+                    {
+                        this->printLocation(message.content);
+                        exit(1);
+                    }
                     auto initVal = dynamic_cast<InitVal *>(dynamic_cast<Def *>(def.get())->initVal.get());
                     initVal->analyze();
                 }
@@ -494,6 +500,12 @@ namespace Compiler::AST
                     auto lval = dynamic_cast<Lval *>(def.get());
                     auto name = dynamic_cast<Ident *>(lval->ident.get())->name;
                     auto message = context.insert(name, type->type);
+                    if (!message.success)
+                    {
+                        this->printLocation(message.content);
+                        exit(1);
+                    }
+                    message = context.setValue(name, std::monostate{});
                     if (!message.success)
                     {
                         this->printLocation(message.content);
@@ -525,7 +537,20 @@ namespace Compiler::AST
 
     void Type::toLLVM()
     {
-        context.typeStack.push_back(type);
+        switch (type)
+        {
+        case InnerType::INT:
+            context.typeStack.push_back(llvm::Type::getInt32Ty(llvmContext));
+            break;
+        case InnerType::FLOAT:
+            context.typeStack.push_back(llvm::Type::getFloatTy(llvmContext));
+            break;
+        case InnerType::ARRAY:
+        case InnerType::VOID:
+        default:
+            std::cerr << "Type::toLLVM() is not implemented" << std::endl;
+            exit(1);
+        }
     }
 
     Type::Type(InnerType type) : type(type)
@@ -561,48 +586,25 @@ namespace Compiler::AST
 
     void Def::toLLVM()
     {
-        auto lval = dynamic_cast<Lval *>(this->lval.get());
-        auto name = dynamic_cast<Ident *>(lval->ident.get())->name;
-        auto type = context.typeStack.back();
-        auto initVal = dynamic_cast<InitVal *>(this->initVal.get());
-        switch (type){
-            case InnerType::INT:
-            {
-                if (initVal->children.size() == 1){
-                    auto val = dynamic_cast<Int32 *>(initVal->children[0].get())->val;
-                    if (context.isGlobal()){
-                        auto global = new llvm::GlobalVariable(*module, llvm::Type::getInt32Ty(llvmContext), context.isConstant.value(), llvm::GlobalValue::ExternalLinkage, nullptr, name);
-                        global->setAlignment(llvm::MaybeAlign(4));
-                        global->setInitializer(llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), val));
-                    }else{
-                        auto alloca = IRBuilder.CreateAlloca(llvm::Type::getInt32Ty(llvmContext), nullptr, name);
-                        IRBuilder.CreateStore(llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), val), alloca);
-                    }
-                }
+        lval->toLLVM();
+        initVal->toLLVM();
+        if (context.isGlobal())
+        {
+            auto global = context.globalStack.back();
+            context.globalStack.pop_back();
+            auto val = context.valueStack.back();
+            if (llvm::isa<llvm::Constant>(val)){
+                auto constant = llvm::dyn_cast<llvm::Constant>(val);
+                global->setInitializer(constant);
+            }else{
+                global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
             }
-            break;
-            case InnerType::FLOAT:
-            {
-                if (initVal->children.size() == 1){
-                    auto val = dynamic_cast<Float32 *>(initVal->children[0].get())->val;
-                    if (context.isGlobal()){
-                        auto global = new llvm::GlobalVariable(*module, llvm::Type::getFloatTy(llvmContext), context.isConstant.value(), llvm::GlobalValue::ExternalLinkage, nullptr, name);
-                        global->setAlignment(llvm::MaybeAlign(4));
-                        global->setInitializer(llvm::ConstantFP::get(llvm::Type::getFloatTy(llvmContext), val));
-                    }else{
-                        auto alloca = IRBuilder.CreateAlloca(llvm::Type::getFloatTy(llvmContext), nullptr, name);
-                        context.blockStack.back()->getInstList().push_back(alloca);
-                        auto store = IRBuilder.CreateStore(llvm::ConstantFP::get(llvm::Type::getFloatTy(llvmContext), val), alloca);
-                        context.blockStack.back()->getInstList().push_back(store);
-                    }
-                }
-            }
-            break;
-            case InnerType::ARRAY:
-            case InnerType::VOID:
-            default:
-                std::cerr<<"toLLVM() is not implemented"<<std::endl;
-                exit(1);
+        }
+        else
+        {
+            auto alloca = context.allocaStack.back();
+            context.allocaStack.pop_back();
+            IRBuilder.CreateStore(context.valueStack.back(), alloca);
         }
     }
 
@@ -620,44 +622,7 @@ namespace Compiler::AST
 
     void Lval::toLLVM()
     {
-        auto name = dynamic_cast<Ident *>(ident.get())->name;
-        auto type = context.typeStack.back();
-        switch (type)
-        {
-        case InnerType::INT:
-        {
-            if (context.isGlobal())
-            {
-                auto global = new llvm::GlobalVariable(*module, llvm::Type::getInt32Ty(llvmContext), false, llvm::GlobalValue::ExternalLinkage, nullptr, name);
-                global->setAlignment(llvm::MaybeAlign(4));
-            }
-            else
-            {
-                auto alloca = IRBuilder.CreateAlloca(llvm::Type::getInt32Ty(llvmContext), nullptr, name);
-                context.blockStack.back()->getInstList().push_back(alloca);
-            }
-        }
-        break;
-        case InnerType::FLOAT:
-        {
-            if (context.isGlobal())
-            {
-                auto global = new llvm::GlobalVariable(*module, llvm::Type::getFloatTy(llvmContext), false, llvm::GlobalValue::ExternalLinkage, nullptr, name);
-                global->setAlignment(llvm::MaybeAlign(4));
-            }
-            else
-            {
-                auto alloca = IRBuilder.CreateAlloca(llvm::Type::getFloatTy(llvmContext), nullptr, name);
-                context.blockStack.back()->getInstList().push_back(alloca);
-            }
-        }
-        break;
-        case InnerType::ARRAY:
-        case InnerType::VOID:
-        default:
-            std::cerr << "toLLVM() is not implemented" << std::endl;
-            exit(1);
-        }
+        ident->toLLVM();
     }
 
     void Lval::analyze()
@@ -691,7 +656,9 @@ namespace Compiler::AST
 
     void InitVal::toLLVM()
     {
-        // TODO
+        if (children.size() == 1){
+            children[0]->toLLVM();
+        }
     }
 
     void InitVal::analyze()
@@ -757,20 +724,7 @@ namespace Compiler::AST
         retType->toLLVM();
         auto name = dynamic_cast<Ident *>(ident.get())->name;
         auto type = context.typeStack.back();
-        llvm::Type *returnType = nullptr;
-        switch (type)
-        {
-        case InnerType::INT:
-            returnType = llvm::Type::getInt32Ty(llvmContext);
-            break;
-        case InnerType::FLOAT:
-            returnType = llvm::Type::getFloatTy(llvmContext);
-            break;
-        default:
-            returnType = llvm::Type::getVoidTy(llvmContext); // Handle any other enumeration values
-            break;
-        }
-        llvm::FunctionType *funcType = llvm::FunctionType::get(returnType, false);
+        llvm::FunctionType *funcType = llvm::FunctionType::get(type, false);
         llvm::Function *function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
         context.functionStack.push_back(function);
         block->toLLVM();
@@ -855,7 +809,11 @@ namespace Compiler::AST
     //参考def
     void AssignStmt::toLLVM()
     {
-        ;
+        lval->toLLVM();
+        expr->toLLVM();
+        auto alloca = context.allocaStack.back();
+        context.allocaStack.pop_back();
+        IRBuilder.CreateStore(context.valueStack.back(), alloca);
     }
 
     ExpStmt::ExpStmt(NodePtr expr) : expr(std::move(expr))
@@ -1001,11 +959,6 @@ namespace Compiler::AST
         {
             this->expr = std::move(constantFolding(this->expr.get()));
         }
-        if (!isConst(this->expr.get()))
-        {
-            this->printLocation("The return value must be a constant");
-            exit(1);
-        }
     }
 
     void ReturnStmt::toMermaid()
@@ -1150,19 +1103,41 @@ namespace Compiler::AST
 
     void Ident::toLLVM()
     {
-        auto gVar = module->getGlobalVariable(name);
-        if (gVar){
-            context.valueStack.push_back(gVar);
-        }else{
+        if (context.isGlobal())
+        {
+            llvm::GlobalVariable *gVar = module->getGlobalVariable(name);
+            if (gVar)
+            {
+                llvm::Value *value = IRBuilder.CreateLoad(gVar->getValueType(), gVar, "loadtmp");
+                context.valueStack.push_back(value);
+                return;
+            }
+            auto type = context.typeStack.back();
+            auto global = new llvm::GlobalVariable(*module, type, false, llvm::GlobalValue::ExternalLinkage, nullptr, name);
+            global->setAlignment(llvm::MaybeAlign(4));
+            context.globalStack.push_back(global);
+        }
+        else
+        {
             auto function = context.functionStack.back();
-            for (auto& BB : *function){
-                for (auto& inst : BB){
-                    if (inst.getName() == name){
-                        context.valueStack.push_back(&inst);
-                        return;
+            for (auto &BB : *function)
+            {
+                for (auto &I : BB)
+                {
+                    if (auto *alloca = llvm::dyn_cast<llvm::AllocaInst>(&I))
+                    {
+                        if (alloca->getName() == name)
+                        {
+                            llvm::Value *value = IRBuilder.CreateLoad(alloca->getAllocatedType(), alloca, "loadtmp");
+                            context.valueStack.push_back(value);
+                            return;
+                        }
                     }
                 }
             }
+            auto type = context.typeStack.back();
+            auto alloca = IRBuilder.CreateAlloca(type, nullptr, name);
+            context.allocaStack.push_back(alloca);
         }
     }
 

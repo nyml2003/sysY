@@ -6,15 +6,22 @@
 main:                                   # @main
 	.cfi_startproc
 # %bb.0:                                # %entry
-	movl	$15129, -4(%rsp)                # imm = 0x3B19
-	movl	$246, %eax
+	movl	$1, -4(%rsp)
+	movl	$5, %eax
 	retq
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main
 	.cfi_endproc
                                         # -- End function
+	.type	b,@object                       # @b
+	.data
+	.globl	b
+	.p2align	2
+b:
+	.long	2                               # 0x2
+	.size	b, 4
+
 	.type	a,@object                       # @a
-	.section	.rodata,"a",@progbits
 	.globl	a
 	.p2align	2
 a:

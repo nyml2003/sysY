@@ -1,11 +1,14 @@
 ; ModuleID = 'sysy'
 source_filename = "sysy"
 
-@a = constant i32 123, align 4
+@b = global i32 2, align 4
+@a = global i32 123, align 4
 
 define i32 @main() {
 entry:
-  %b = alloca i32, align 4
-  store i32 15129, i32* %b, align 4
-  ret i32 246
+  %a = alloca i32, align 4
+  store i32 1, i32* %a, align 4
+  %loadtmp = load i32, i32* %a, align 4
+  %0 = add i32 %loadtmp, 4
+  ret i32 %0
 }

@@ -1,7 +1,7 @@
 #include "Driver.hpp"
 int main(int argc, char* argv[]) {
-    
-    std::string folderName = "/app/tests/Decl-1/";
+
+    std::string folderName = "/app/tests/Assign-1/";
     std::string input = (argc == 5) ? argv[1] : folderName + "in.sy";
     std::string md = (argc == 5) ? argv[2] : folderName + "out.md";
     std::string error = (argc == 5) ? argv[3] : folderName + "out.err";
@@ -11,10 +11,6 @@ int main(int argc, char* argv[]) {
     driver.setErrorFileName(error);
     driver.setTraceParsing(false);
     driver.setTraceScanning(false);
-    for (int i = 0; i < argc; i++)
-    {
-        std::cout << argv[i] << std::endl;
-    }
     driver.parse();
     freopen(error.c_str(), "w", stderr);
     driver.result->analyze();

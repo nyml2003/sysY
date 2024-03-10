@@ -5,6 +5,7 @@ graph LR
         A[Source] --Driver--> B[flex/bison]
         B ---> C[AST]
         C ---> E[LLVM IR]
+        E ---> F[Assembly]
     end
     C -- output--> D[Mermaid]
 ```

@@ -1,0 +1,6 @@
+const int a=1;
+const int b=2;
+int main(){
+    a=233;
+    return a+b;
+}

@@ -1,5 +1,6 @@
+const int b=2;
 const int a=123;
 int main(){
-    int b=a*a;
-    return a+a;
+    int a=1;
+    return a+b*2;
 }

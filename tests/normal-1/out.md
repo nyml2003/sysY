@@ -1,8 +1,3 @@
-/app/build/sed
-/app/tests/normal-1/in.sy
-/app/tests/normal-1/out.md
-/app/tests/normal-1/error.txt
-/app/tests/normal-1/out.ll
 ```mermaid
 graph TD
 26[CompUnit]--0--->25

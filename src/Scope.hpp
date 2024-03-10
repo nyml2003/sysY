@@ -32,8 +32,9 @@ namespace Compiler::Scope
         std::vector<llvm::BasicBlock*> blockStack;
         std::vector<llvm::Function*> functionStack;
         std::vector<llvm::GlobalVariable*> globalStack;
+        std::vector<llvm::AllocaInst*> allocaStack;
         std::vector<llvm::Value*> valueStack;
-        std::vector<Compiler::AST::InnerType> typeStack;
+        std::vector<llvm::Type*> typeStack;
 
         bool isGlobal(); //根据symbolTable判断是否为全局变量
         std::optional<bool> isConstant = std::nullopt; //当前是否为常量
