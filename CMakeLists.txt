@@ -67,8 +67,44 @@ foreach (TEST_DIR ${TEST_DIRS})
     set (TEST_IR ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.ll)
 
     set(TEST_ERROR ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/error.txt)
+    set (TEST_EXE ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.exe)
+    set (TEST_ASM ${CMAKE_CURRENT_SOURCE_DIR}/tests/${TEST_DIR}/out.s)
+
+    if (NOT EXISTS ${TEST_INPUT})
+        file(WRITE ${TEST_INPUT} "")
+    endif ()
+    if (NOT EXISTS ${TEST_MD})
+        file(WRITE ${TEST_MD} "")
+    endif ()
+    if (NOT EXISTS ${TEST_ERROR})
+        file(WRITE ${TEST_ERROR} "")
+    endif ()
+    if (NOT EXISTS ${TEST_IR})
+        file(WRITE ${TEST_IR} "")
+    endif ()
+    if (NOT EXISTS ${TEST_ASM})
+        file(WRITE ${TEST_ASM} "")
+    endif ()
+    if (NOT EXISTS ${TEST_EXE})
+        file(WRITE ${TEST_EXE} "")
+    endif ()
+    
     add_test(
             NAME ${TEST_DIR}
-            COMMAND sed ${OUTPUT_PRODUCT_NAME} ${TEST_INPUT} {TEST_MD} ${TEST_ERROR}  ${TEST_IR}
+            COMMAND sed ${TEST_INPUT} ${TEST_MD} ${TEST_ERROR}  ${TEST_IR}
+            )
+
+    add_test(
+            NAME ${TEST_DIR}_toAssembly
+            COMMAND llc ${TEST_IR} -o ${TEST_ASM}
+    )
+
+    add_test(
+            NAME ${TEST_DIR}_toExe
+            COMMAND clang ${TEST_ASM} -o ${TEST_EXE}
+    )
+
+    set_tests_properties(${TEST_DIR} PROPERTIES
+            TIMEOUT 10
     )
 endforeach ()

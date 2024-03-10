@@ -89,6 +89,10 @@ namespace Compiler::AST
         */
         virtual void toMermaid() = 0;
         /**
+         * @brief 输出LLVM IR
+         */
+        virtual void toLLVM() = 0;
+        /**
          * @brief 分析抽象语法树
         */
         virtual void analyze() = 0;
@@ -105,6 +109,7 @@ namespace Compiler::AST
     {
         explicit CompUnit();
         void toMermaid() override;
+        void toLLVM() override;
         void analyze() override;
         void attach(std::vector<NodePtr> chilren);
         std::vector<NodePtr> children;
@@ -115,6 +120,7 @@ namespace Compiler::AST
         explicit Decl(NodePtr type, std::vector<NodePtr> defList);
         void analyze() override;
         void toMermaid() override;
+        void toLLVM() override;
         void addDecorator(Decorator decorator);
         NodePtr type;
         std::vector<NodePtr> defList;
@@ -123,10 +129,10 @@ namespace Compiler::AST
 
     struct Type : public Node
     {
-        explicit Type();
         void analyze() override;
         explicit Type(InnerType type);
         void toMermaid() override;
+        void toLLVM() override;
         InnerType type;
     };
 
@@ -135,6 +141,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit Def(NodePtr lval, NodePtr initVal);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr lval;
         NodePtr initVal;
     };
@@ -145,6 +152,7 @@ namespace Compiler::AST
         explicit Lval(NodePtr ident, std::vector<NodePtr> dim);
         explicit Lval(NodePtr ident);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr ident;
         std::vector<NodePtr> dim;
     };
@@ -155,6 +163,7 @@ namespace Compiler::AST
         explicit InitVal(NodePtr child);
         explicit InitVal(std::vector<NodePtr> children);
         void toMermaid() override;
+        void toLLVM() override;
         std::vector<NodePtr> children;
     };
 
@@ -163,6 +172,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit FuncDef(NodePtr retType, NodePtr ident, NodePtr block);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr retType;
         NodePtr ident;
         NodePtr block;
@@ -174,6 +184,7 @@ namespace Compiler::AST
         explicit Block();
         explicit Block(std::vector<NodePtr> children);
         void toMermaid() override;
+        void toLLVM() override;
         std::vector<NodePtr> children;
     };
 
@@ -182,6 +193,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit AssignStmt(NodePtr lval, NodePtr expr);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr lval;
         NodePtr expr;
     };
@@ -191,6 +203,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit ExpStmt(NodePtr expr);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr expr;
     };
 
@@ -200,6 +213,7 @@ namespace Compiler::AST
         explicit IfStmt(NodePtr cond, NodePtr thenStmt, NodePtr elseStmt);
         explicit IfStmt(NodePtr cond, NodePtr thenStmt);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr cond;
         NodePtr thenStmt;
         NodePtr elseStmt;
@@ -210,6 +224,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit WhileStmt(NodePtr expr, NodePtr stmt);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr expr;
         NodePtr stmt;
     };
@@ -219,6 +234,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit BreakStmt();
         void toMermaid() override;
+        void toLLVM() override;
     };
 
     struct ContinueStmt : public Node
@@ -226,6 +242,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit ContinueStmt();
         void toMermaid() override;
+        void toLLVM() override;
     };
 
     struct ReturnStmt : public Node
@@ -233,6 +250,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit ReturnStmt(NodePtr expr);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr expr;
     };
 
@@ -241,6 +259,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit Int32(int32_t val);
         void toMermaid() override;
+        void toLLVM() override;
         int32_t val;
     };
 
@@ -249,6 +268,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit Float32(float val);
         void toMermaid() override;
+        void toLLVM() override;
         float val;
     };
 
@@ -257,6 +277,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit UnaryExp(Operator op, NodePtr expr);
         void toMermaid() override;
+        void toLLVM() override;
         Operator op;
         NodePtr expr;
     };
@@ -266,6 +287,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit BinaryExp(NodePtr left, Operator op, NodePtr right);
         void toMermaid() override;
+        void toLLVM() override;
         NodePtr left;
         Operator op;
         NodePtr right;
@@ -276,6 +298,7 @@ namespace Compiler::AST
         void analyze() override;
         explicit Ident(std::string& name);
         void toMermaid() override;
+        void toLLVM() override;
         std::string name;
     };
 }

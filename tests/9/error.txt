@@ -1,2 +1,0 @@
---(end of buffer or a NUL)
-input in flex scanner failed

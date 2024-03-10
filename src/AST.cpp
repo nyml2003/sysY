@@ -3,6 +3,16 @@
 #include <fstream>
 #include "driver.hpp"
 #include "Scope.hpp"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/IR/Verifier.h"
 namespace Compiler::AST
 {
     int32_t eval(Operator op, int32_t left, int32_t right){
@@ -289,6 +299,17 @@ namespace Compiler::AST
         }
     }
 
+    void CompUnit::toLLVM()
+    {
+        context.enterScope();
+        for (auto &child : children)
+        {
+            child->toLLVM();
+        }
+        context.exitScope();
+        module->print(llvm::outs(), nullptr);
+    }
+
     void CompUnit::attach(std::vector<NodePtr> _children)
     {
         this->children.clear();
@@ -352,6 +373,26 @@ namespace Compiler::AST
             defList[i]->toMermaid();
         }
     }
+
+    void Decl::toLLVM()
+    {
+        type->toLLVM(); // 将当前类型存入context
+        bool hasConst = false;
+        for (auto &def : decorators){
+            if (def == Decorator::CONSTANT){
+                hasConst = true;
+                break;
+            }
+        }
+        context.isConstant = hasConst;
+        for (auto &def : defList)
+        {
+            def->toLLVM();
+        }
+        context.isConstant = std::nullopt;
+        context.typeStack.pop_back();
+    }
+
     void Decl::analyze()
     {
         bool hasConst = false;
@@ -401,9 +442,9 @@ namespace Compiler::AST
                             this->printLocation(message.content);
                             exit(1);
                         }
-                        break;
-                    }
                         
+                    }
+                    break;
                     case InnerType::FLOAT:{
                         if (isConst(initVal->children[0].get()) && constantFolding(initVal->children[0].get()))
                         {
@@ -420,9 +461,9 @@ namespace Compiler::AST
                             this->printLocation(message.content);
                             exit(1);
                         }
-                        break;
-                    }
                         
+                    }
+                    break;
                     case InnerType::ARRAY:
                     case InnerType::VOID:
                     default:
@@ -482,6 +523,11 @@ namespace Compiler::AST
         std::cout << nodeId << "[Type:" << innerType[static_cast<int>(type)] << "]" << std::endl;
     }
 
+    void Type::toLLVM()
+    {
+        context.typeStack.push_back(type);
+    }
+
     Type::Type(InnerType type) : type(type)
     {
         this->nodeType = NODE_TYPE::TYPE;
@@ -513,6 +559,53 @@ namespace Compiler::AST
         initVal->toMermaid();
     }
 
+    void Def::toLLVM()
+    {
+        auto lval = dynamic_cast<Lval *>(this->lval.get());
+        auto name = dynamic_cast<Ident *>(lval->ident.get())->name;
+        auto type = context.typeStack.back();
+        auto initVal = dynamic_cast<InitVal *>(this->initVal.get());
+        switch (type){
+            case InnerType::INT:
+            {
+                if (initVal->children.size() == 1){
+                    auto val = dynamic_cast<Int32 *>(initVal->children[0].get())->val;
+                    if (context.isGlobal()){
+                        auto global = new llvm::GlobalVariable(*module, llvm::Type::getInt32Ty(llvmContext), context.isConstant.value(), llvm::GlobalValue::ExternalLinkage, nullptr, name);
+                        global->setAlignment(llvm::MaybeAlign(4));
+                        global->setInitializer(llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), val));
+                    }else{
+                        auto alloca = IRBuilder.CreateAlloca(llvm::Type::getInt32Ty(llvmContext), nullptr, name);
+                        IRBuilder.CreateStore(llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), val), alloca);
+                    }
+                }
+            }
+            break;
+            case InnerType::FLOAT:
+            {
+                if (initVal->children.size() == 1){
+                    auto val = dynamic_cast<Float32 *>(initVal->children[0].get())->val;
+                    if (context.isGlobal()){
+                        auto global = new llvm::GlobalVariable(*module, llvm::Type::getFloatTy(llvmContext), context.isConstant.value(), llvm::GlobalValue::ExternalLinkage, nullptr, name);
+                        global->setAlignment(llvm::MaybeAlign(4));
+                        global->setInitializer(llvm::ConstantFP::get(llvm::Type::getFloatTy(llvmContext), val));
+                    }else{
+                        auto alloca = IRBuilder.CreateAlloca(llvm::Type::getFloatTy(llvmContext), nullptr, name);
+                        context.blockStack.back()->getInstList().push_back(alloca);
+                        auto store = IRBuilder.CreateStore(llvm::ConstantFP::get(llvm::Type::getFloatTy(llvmContext), val), alloca);
+                        context.blockStack.back()->getInstList().push_back(store);
+                    }
+                }
+            }
+            break;
+            case InnerType::ARRAY:
+            case InnerType::VOID:
+            default:
+                std::cerr<<"toLLVM() is not implemented"<<std::endl;
+                exit(1);
+        }
+    }
+
     void Lval::toMermaid()
     {
         std::cout << nodeId << "[Lval]" << std::endl;
@@ -522,6 +615,48 @@ namespace Compiler::AST
         {
             std::cout << nodeId << "--dim" << i << "-->" << dim[i]->nodeId << std::endl;
             dim[i]->toMermaid();
+        }
+    }
+
+    void Lval::toLLVM()
+    {
+        auto name = dynamic_cast<Ident *>(ident.get())->name;
+        auto type = context.typeStack.back();
+        switch (type)
+        {
+        case InnerType::INT:
+        {
+            if (context.isGlobal())
+            {
+                auto global = new llvm::GlobalVariable(*module, llvm::Type::getInt32Ty(llvmContext), false, llvm::GlobalValue::ExternalLinkage, nullptr, name);
+                global->setAlignment(llvm::MaybeAlign(4));
+            }
+            else
+            {
+                auto alloca = IRBuilder.CreateAlloca(llvm::Type::getInt32Ty(llvmContext), nullptr, name);
+                context.blockStack.back()->getInstList().push_back(alloca);
+            }
+        }
+        break;
+        case InnerType::FLOAT:
+        {
+            if (context.isGlobal())
+            {
+                auto global = new llvm::GlobalVariable(*module, llvm::Type::getFloatTy(llvmContext), false, llvm::GlobalValue::ExternalLinkage, nullptr, name);
+                global->setAlignment(llvm::MaybeAlign(4));
+            }
+            else
+            {
+                auto alloca = IRBuilder.CreateAlloca(llvm::Type::getFloatTy(llvmContext), nullptr, name);
+                context.blockStack.back()->getInstList().push_back(alloca);
+            }
+        }
+        break;
+        case InnerType::ARRAY:
+        case InnerType::VOID:
+        default:
+            std::cerr << "toLLVM() is not implemented" << std::endl;
+            exit(1);
         }
     }
 
@@ -552,6 +687,11 @@ namespace Compiler::AST
             std::cout << nodeId << "--" << i << "-->" << children[i]->nodeId << std::endl;
             children[i]->toMermaid();
         }
+    }
+
+    void InitVal::toLLVM()
+    {
+        // TODO
     }
 
     void InitVal::analyze()
@@ -611,6 +751,38 @@ namespace Compiler::AST
         std::cout << nodeId << "--block-->" << block->nodeId << std::endl;
         block->toMermaid();
     }
+    
+    void FuncDef::toLLVM()
+    {
+        retType->toLLVM();
+        auto name = dynamic_cast<Ident *>(ident.get())->name;
+        auto type = context.typeStack.back();
+        llvm::Type *returnType = nullptr;
+        switch (type)
+        {
+        case InnerType::INT:
+            returnType = llvm::Type::getInt32Ty(llvmContext);
+            break;
+        case InnerType::FLOAT:
+            returnType = llvm::Type::getFloatTy(llvmContext);
+            break;
+        default:
+            returnType = llvm::Type::getVoidTy(llvmContext); // Handle any other enumeration values
+            break;
+        }
+        llvm::FunctionType *funcType = llvm::FunctionType::get(returnType, false);
+        llvm::Function *function = llvm::Function::Create(funcType, llvm::Function::ExternalLinkage, name, module);
+        context.functionStack.push_back(function);
+        block->toLLVM();
+        context.typeStack.pop_back();
+        function = context.functionStack.back();
+        if (llvm::verifyFunction(*function, &llvm::errs()))
+        {
+            std::cerr << "The function is not valid" << std::endl;
+            exit(1);
+        }
+        context.functionStack.pop_back();
+    }
 
     Block::Block(){
         this->nodeType = NODE_TYPE::BLOCK;}
@@ -642,6 +814,20 @@ namespace Compiler::AST
         }
     }
 
+    void Block::toLLVM()
+    {
+        llvm::BasicBlock *block = llvm::BasicBlock::Create(llvmContext, "entry", context.functionStack.back());
+        IRBuilder.SetInsertPoint(block);
+        context.blockStack.push_back(block);
+        context.enterScope();
+        for (auto &child : children)
+        {
+            child->toLLVM();
+        }
+        context.exitScope();
+        context.blockStack.pop_back();
+    }
+
     AssignStmt::AssignStmt(NodePtr lval, NodePtr expr) : lval(std::move(lval)), expr(std::move(expr))
     {
         begin = this->lval->begin;
@@ -666,6 +852,12 @@ namespace Compiler::AST
         expr->toMermaid();
     }
 
+    //参考def
+    void AssignStmt::toLLVM()
+    {
+        ;
+    }
+
     ExpStmt::ExpStmt(NodePtr expr) : expr(std::move(expr))
     {
         begin = this->expr->begin;
@@ -676,6 +868,11 @@ namespace Compiler::AST
     void ExpStmt::analyze()
     {
         // TODO
+    }
+
+    void ExpStmt::toLLVM()
+    {
+        expr->toLLVM();
     }
 
     void ExpStmt::toMermaid()
@@ -719,6 +916,11 @@ namespace Compiler::AST
         }
     }
 
+    void IfStmt::toLLVM()
+    {
+        //TODO
+    }
+
     WhileStmt::WhileStmt(NodePtr expr, NodePtr stmt) : expr(std::move(expr)), stmt(std::move(stmt))
     {
         begin = this->expr->begin;
@@ -729,6 +931,11 @@ namespace Compiler::AST
     void WhileStmt::analyze()
     {
         // TODO
+    }
+
+    void WhileStmt::toLLVM()
+    {
+        //TODO
     }
 
     void WhileStmt::toMermaid()
@@ -755,6 +962,11 @@ namespace Compiler::AST
         std::cout << nodeId << "[BreakStmt]" << std::endl;
     }
 
+    void BreakStmt::toLLVM()
+    {
+        //TODO
+    }
+
     ContinueStmt::ContinueStmt()
     {
         this->nodeType = NODE_TYPE::CONTINUE_STMT;
@@ -768,6 +980,11 @@ namespace Compiler::AST
     void ContinueStmt::toMermaid()
     {
         std::cout << nodeId << "[ContinueStmt]" << std::endl;
+    }
+
+    void ContinueStmt::toLLVM()
+    {
+        //TODO
     }
 
 
@@ -784,6 +1001,11 @@ namespace Compiler::AST
         {
             this->expr = std::move(constantFolding(this->expr.get()));
         }
+        if (!isConst(this->expr.get()))
+        {
+            this->printLocation("The return value must be a constant");
+            exit(1);
+        }
     }
 
     void ReturnStmt::toMermaid()
@@ -791,6 +1013,14 @@ namespace Compiler::AST
         std::cout << nodeId << "[ReturnStmt]" << std::endl;
         std::cout << nodeId << "--expr-->" << expr->nodeId << std::endl;
         expr->toMermaid();
+    }
+
+    void ReturnStmt::toLLVM()
+    {
+        expr->toLLVM();
+        auto value = context.valueStack.back();
+        context.valueStack.pop_back();
+        IRBuilder.CreateRet(value);
     }
 
     BinaryExp::BinaryExp(NodePtr left, Operator op, NodePtr right) : left(std::move(left)), op(op), right(std::move(right))
@@ -814,6 +1044,60 @@ namespace Compiler::AST
         right->toMermaid();
     }
 
+    void BinaryExp::toLLVM(){
+        left->toLLVM();
+        auto leftValue = context.valueStack.back();
+        context.valueStack.pop_back();
+        right->toLLVM();
+        auto rightValue = context.valueStack.back();
+        context.valueStack.pop_back();
+        switch (op)
+        {
+        case Operator::ADD:
+            context.valueStack.push_back(IRBuilder.CreateAdd(leftValue, rightValue));
+            break;
+        case Operator::SUB:
+            context.valueStack.push_back(IRBuilder.CreateSub(leftValue, rightValue));
+            break;
+        case Operator::MUL:
+            context.valueStack.push_back(IRBuilder.CreateMul(leftValue, rightValue));
+            break;
+        case Operator::DIV:
+            context.valueStack.push_back(IRBuilder.CreateSDiv(leftValue, rightValue));
+            break;
+        case Operator::MOD:
+            context.valueStack.push_back(IRBuilder.CreateSRem(leftValue, rightValue));
+            break;
+        case Operator::AND:
+            context.valueStack.push_back(IRBuilder.CreateAnd(leftValue, rightValue));
+            break;
+        case Operator::OR:
+            context.valueStack.push_back(IRBuilder.CreateOr(leftValue, rightValue));
+            break;
+        case Operator::EQ:
+            context.valueStack.push_back(IRBuilder.CreateICmpEQ(leftValue, rightValue));
+            break;
+        case Operator::NE:
+            context.valueStack.push_back(IRBuilder.CreateICmpNE(leftValue, rightValue));
+            break;
+        case Operator::LT:
+            context.valueStack.push_back(IRBuilder.CreateICmpSLT(leftValue, rightValue));
+            break;
+        case Operator::LE:
+            context.valueStack.push_back(IRBuilder.CreateICmpSLE(leftValue, rightValue));
+            break;
+        case Operator::GT:
+            context.valueStack.push_back(IRBuilder.CreateICmpSGT(leftValue, rightValue));
+            break;
+        case Operator::GE:
+            context.valueStack.push_back(IRBuilder.CreateICmpSGE(leftValue, rightValue));
+            break;
+        default:
+            std::cerr << "toLLVM() is not implemented" << std::endl;
+            exit(1);
+        }
+    }
+
     UnaryExp::UnaryExp(Operator op, NodePtr expr) : op(op), expr(std::move(expr))
     {
         begin = this->expr->begin;
@@ -832,6 +1116,28 @@ namespace Compiler::AST
         expr->toMermaid();
     }
 
+    void UnaryExp::toLLVM()
+    {
+        expr->toLLVM();
+        auto value = context.valueStack.back();
+        context.valueStack.pop_back();
+        switch (op)
+        {
+        case Operator::ADD:
+            context.valueStack.push_back(value);
+            break;
+        case Operator::SUB:
+            context.valueStack.push_back(IRBuilder.CreateNeg(value));
+            break;
+        case Operator::NOT:
+            context.valueStack.push_back(IRBuilder.CreateNot(value));
+            break;
+        default:
+            std::cerr << "toLLVM() is not implemented" << std::endl;
+            exit(1);
+        }
+    }
+
     Ident::Ident(std::string &name) : name(name)
     {
         this->nodeType = NODE_TYPE::IDENT;
@@ -840,6 +1146,24 @@ namespace Compiler::AST
     void Ident::toMermaid()
     {
         std::cout << nodeId << "[" << name << "]" << std::endl;
+    }
+
+    void Ident::toLLVM()
+    {
+        auto gVar = module->getGlobalVariable(name);
+        if (gVar){
+            context.valueStack.push_back(gVar);
+        }else{
+            auto function = context.functionStack.back();
+            for (auto& BB : *function){
+                for (auto& inst : BB){
+                    if (inst.getName() == name){
+                        context.valueStack.push_back(&inst);
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     void Ident::analyze()
@@ -863,6 +1187,11 @@ namespace Compiler::AST
         // TODO
     }
 
+    void Int32::toLLVM()
+    {
+        context.valueStack.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), val));
+    }
+
     Float32::Float32(float val) : val(val)
     {
         this->nodeType = NODE_TYPE::FLOAT32;
@@ -876,5 +1205,10 @@ namespace Compiler::AST
     void Float32::toMermaid()
     {
         std::cout << nodeId << "[" << val << "]" << std::endl;
+    }
+
+    void Float32::toLLVM()
+    {
+        context.valueStack.push_back(llvm::ConstantFP::get(llvm::Type::getFloatTy(llvmContext), val));
     }
 }

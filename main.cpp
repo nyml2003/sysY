@@ -1,16 +1,20 @@
 #include "Driver.hpp"
 int main(int argc, char* argv[]) {
+    
     std::string folderName = "/app/tests/Decl-1/";
-    std::string type = (argc == 6) ? argv[1] : "llvm";
-    std::string input = (argc == 6) ? argv[2] : folderName + "in.sy";
-    std::string md = (argc == 6) ? argv[3] : folderName + "out.md";
-    std::string error = (argc == 6) ? argv[4] : folderName + "out.err";
-    std::string ir = (argc == 6) ? argv[5] : folderName + "out.ll";
+    std::string input = (argc == 5) ? argv[1] : folderName + "in.sy";
+    std::string md = (argc == 5) ? argv[2] : folderName + "out.md";
+    std::string error = (argc == 5) ? argv[3] : folderName + "out.err";
+    std::string ir = (argc == 5) ? argv[4] : folderName + "out.ll";
     driver.setSourceFileName(input);
     driver.setOutputFileName(md);
     driver.setErrorFileName(error);
     driver.setTraceParsing(false);
     driver.setTraceScanning(false);
+    for (int i = 0; i < argc; i++)
+    {
+        std::cout << argv[i] << std::endl;
+    }
     driver.parse();
     freopen(error.c_str(), "w", stderr);
     driver.result->analyze();
@@ -19,5 +23,6 @@ int main(int argc, char* argv[]) {
     driver.result->toMermaid();
     std::cout << "```" << std::endl;
     driver.setOutputFileName(ir);
+    driver.result->toLLVM();
     return 0;
 }

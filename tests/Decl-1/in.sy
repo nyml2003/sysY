@@ -1,8 +1,5 @@
-
-const int a=3;
-int b,c,d,e;
+const int a=123;
 int main(){
-    const int c=a*a+123+a,d=c,e=c+1;
-    b=c;
-    return 0;
+    int b=a*a;
+    return a+a;
 }

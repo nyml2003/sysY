@@ -38,8 +38,8 @@ namespace Compiler::Scope {
         this->symbolTable.pop_back();
         this->constTable.pop_back();
     }
-
-    Message Context::setValue(std::string name, std::variant<int32_t, float,std::monostate> value) {
+    Message Context::setValue(std::string name, std::variant<int32_t, float, std::monostate> value)
+    {
         for (auto it = this->constTable.rbegin(); it != this->constTable.rend(); it++) {
             if (it->find(name) != it->end()) {
                 return Message{false, "redefined constant", std::monostate{}};
@@ -47,5 +47,9 @@ namespace Compiler::Scope {
         }
         this->constTable.back()[name] = value;
         return Message{true, "", std::monostate{}};
+    }
+
+    bool Context::isGlobal() {
+        return this->symbolTable.size() == 1;
     }
 }
