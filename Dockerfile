@@ -21,6 +21,18 @@ RUN apt-get update && apt-get install -y \
     flex \
     bison
 
+# 创建用户admin,admin
+RUN useradd -m admin && echo "admin:admin" | chpasswd && adduser admin sudo
+RUN echo "admin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# ssh
+RUN mkdir /var/run/sshd
+RUN sed -ri 's/^#?PermitRootLogin\s+.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -ri 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
+
+
+
+
 
 
 
