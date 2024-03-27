@@ -1,5 +1,5 @@
-int a;
 int main(){
-	a=10;
-	return 0;
+	const int a=2;
+    const int b=a*a+a;
+	return b*b*b+a;
 }

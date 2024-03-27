@@ -4,12 +4,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["/bin/bash", "-c", "/tmp/sed/start.sh"]
+    command: ["/bin/bash", "-c", "/home/start.sh && /bin/bash"]
     ports:
       - "8022:22"
     tty: true
     stdin_open: true
     volumes:
-      - .:/tmp/sed
+      - .:/app
     
     

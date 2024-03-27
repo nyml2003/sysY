@@ -3,6 +3,8 @@ LABEL authors="风唤长河"
 
 RUN mv /etc/apt/sources.list /etc/apt/sources.list.bak
 COPY sources.list /etc/apt/
+COPY start.sh /home/
+RUN sed -i 's/\r$//' /home/start.sh
 
 RUN apt-get update && apt-get install -y \
     gcc \
